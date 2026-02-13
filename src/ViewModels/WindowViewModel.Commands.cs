@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using static AccessModifier;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     partial class WindowViewModel
     {
@@ -20,7 +20,7 @@ namespace Minimal.Mvvm.Windows
         /// <remarks>
         /// This command should be bound to the window in the view to handle the ContentRendered event. For example:
         /// <code>
-        /// &lt;minimal:EventTrigger EventName="ContentRendered" Command="{Binding ContentRenderedCommand}" /&gt;
+        /// &lt;minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}" /&gt;
         /// </code>
         /// The command allows you to perform actions such as initial data loading in the <see cref="ContentRenderedAsync"/> method after the window's content has been fully rendered.
         /// </remarks>
@@ -45,10 +45,10 @@ namespace Minimal.Mvvm.Windows
         /// <remarks>
         /// This command should be bound to a window in the view to handle the window's Closing event. For example:
         /// <code>
-        /// &lt;minimal:EventTrigger EventName="Closing" Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" /&gt;
+        /// &lt;minimal:EventToCommand EventName="Closing" Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" /&gt;
         /// </code>
         /// The command allows you to manage cancellation in the <see cref="CanCloseAsync"/> method and perform cleanup operations in the <see cref="ControlViewModel.DisposeAsyncCore"/> method when the window is closing.
-        /// Note that <c>PassEventArgsToCommand</c> must be specified and set to <c>True</c> to pass the <see cref="System.ComponentModel.CancelEventArgs"/> to the command.
+        /// Note that <c>PassEventArgsToCommand</c> must be specified and set to <see langword="true"/> to pass the <see cref="System.ComponentModel.CancelEventArgs"/> to the command.
         /// </remarks>
         [Notify(Setter = Private)]
         private ICommand? _closingCommand;
@@ -57,7 +57,7 @@ namespace Minimal.Mvvm.Windows
         /// Gets or sets the command that is executed after the window placement has been restored.
         /// </summary>
         /// <remarks>
-        /// This command should be bound to the <see cref="Minimal.Mvvm.Windows.WindowPlacementService"/> in the view to handle actions after the window's placement has been restored. For example:
+        /// This command should be bound to the <see cref="Minimal.Mvvm.Wpf.WindowPlacementService"/> in the view to handle actions after the window's placement has been restored. For example:
         /// <code>
         /// &lt;minimal:WindowPlacementService FileName="MainWindow" 
         ///                                  DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"
@@ -72,7 +72,7 @@ namespace Minimal.Mvvm.Windows
         /// Gets or sets the command that is executed after the window placement has been saved.
         /// </summary>
         /// <remarks>
-        /// This command should be bound to the <see cref="Minimal.Mvvm.Windows.WindowPlacementService"/> in the view to handle actions after the window's placement has been saved. For example:
+        /// This command should be bound to the <see cref="Minimal.Mvvm.Wpf.WindowPlacementService"/> in the view to handle actions after the window's placement has been saved. For example:
         /// <code>
         /// &lt;minimal:WindowPlacementService FileName="MainWindow" 
         ///                                  DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"
@@ -128,18 +128,18 @@ namespace Minimal.Mvvm.Windows
         private void Closing(CancelEventArgs arg)
         {
             //https://weblog.west-wind.com/posts/2019/Sep/02/WPF-Window-Closing-Errors
-            if (arg.Cancel || _isClosing)
+            if (arg.Cancel || _isClosing || CancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+            Debug.Assert(!IsDisposingOrDisposed);
+            if (IsDisposingOrDisposed)
             {
                 return;
             }
 
-            if (CancellationToken.IsCancellationRequested)
-            {
-                arg.Cancel = IsDisposing;//do not close while disposing
-                return;
-            }
             arg.Cancel = true;
-            Dispatcher.InvokeAsync(async () => { await CloseAsync(false); });
+            _ = InvokeAsync(async () => { await CloseAsync(false).ConfigureAwait(false); });
         }
 
         /// <summary>
@@ -223,12 +223,14 @@ namespace Minimal.Mvvm.Windows
         /// <remarks>
         /// The ContentRenderedCommand should be bound to the window in the view to handle the ContentRendered event. For example:
         /// <code>
-        /// &lt;minimal:EventTrigger EventName="ContentRendered" Command="{Binding ContentRenderedCommand}" /&gt;
+        /// &lt;minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}" /&gt;
         /// </code>
         /// The command allows you to perform actions such as initial data loading in the <see cref="ContentRenderedAsync"/> method after the window's content has been fully rendered.
         /// </remarks>
         protected virtual ValueTask OnContentRenderedAsync(CancellationToken cancellationToken)
         {
+            Debug.Assert(WindowService != null, $"{nameof(WindowService)} is null");
+            Debug.Assert(OpenWindowsService != null, $"{nameof(OpenWindowsService)} is null");
             return cancellationToken.IsCancellationRequested ? ValueTask.FromCanceled(cancellationToken) : ValueTask.CompletedTask;
         }
 

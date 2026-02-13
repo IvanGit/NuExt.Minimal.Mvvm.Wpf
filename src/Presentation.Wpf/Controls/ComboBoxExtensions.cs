@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace System.Windows.Controls
+namespace Presentation.Wpf.Controls
 {
-    public static class ComboBoxItemHelper
+    public static class ComboBoxExtensions
     {
         /// <summary>
         /// Retrieves a ComboBoxItem from a ComboBox based on the specified item.

@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Minimal.Mvvm.Windows.Controls
+namespace Minimal.Mvvm.Wpf.Controls
 {
     [TemplatePart(Name = PART_Content, Type = typeof(ContentPresenter))]
     [TemplatePart(Name = PART_Bottom, Type = typeof(ContentPresenter))]

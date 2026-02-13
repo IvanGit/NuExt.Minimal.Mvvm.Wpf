@@ -1,0 +1,139 @@
+﻿<Window x:Class="WpfMultiThreadedApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:minimal="http://schemas.nuext.minimal/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:local="clr-namespace:WpfMultiThreadedApp"
+        xmlns:viewModels="clr-namespace:WpfMultiThreadedApp.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance {x:Type viewModels:MainWindowViewModel}, IsDesignTimeCreatable=True}"
+        ResizeMode="CanResizeWithGrip"
+        WindowStartupLocation="CenterScreen"
+        Title="{Binding Title, TargetNullValue={x:Static local:Loc.Untitled}}" 
+        Height="550" MinHeight="500" Width="900" MinWidth="800">
+    <Window.Resources>
+        <ResourceDictionary>
+
+            <DataTemplate x:Key="CityTemplateKey">
+                <Border BorderBrush="LightGray" BorderThickness="1" CornerRadius="8" 
+                        Margin="5" Padding="10" Background="#f5f5f5">
+                    <Border.InputBindings>
+                        <MouseBinding MouseAction="LeftDoubleClick"
+                                      Command="{Binding DataContext.ShowCityCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                      CommandParameter="{Binding Key}" />
+                    </Border.InputBindings>
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Key.Name}" 
+                           FontWeight="Bold" FontSize="16"
+                           HorizontalAlignment="Center" />
+
+                            <TextBlock Text="{Binding Value.LocalTime, StringFormat='HH:mm:ss'}" 
+                           FontSize="24" HorizontalAlignment="Center"
+                           Margin="0,5,0,0" />
+
+                            <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center"
+                            Margin="0,5,0,0">
+                                <TextBlock Text="{Binding Value.LocalTime, StringFormat='dd.MM.yyyy'}" 
+                               Foreground="Gray" />
+                                <TextBlock Text="{Binding Key.TimeZoneInfo.StandardName}" 
+                               Foreground="Gray" Margin="10,0,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Button Content="×" 
+                                FontSize="14"
+                                FontWeight="Bold"
+                                Foreground="#666666"
+                                Width="24" 
+                                Height="24"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,-8,-8,0"
+                                Padding="0"
+                                Background="White"
+                                BorderBrush="#CCCCCC"
+                                BorderThickness="1"
+                                Cursor="Hand"
+                                ToolTip="{x:Static local:Loc.Close_City}"
+                                Command="{Binding DataContext.CloseCityCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                CommandParameter="{Binding Key}">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="4"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <minimal:Interaction.Behaviors>
+        <minimal:DispatcherService x:Name="MainDispatcherService"/>
+    </minimal:Interaction.Behaviors>
+    
+    <minimal:Interaction.BehaviorsTemplateSelector>
+        <StaticResource ResourceKey="BehaviorsTemplateSelectorKey" />
+    </minimal:Interaction.BehaviorsTemplateSelector>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ListView x:Name="CitiesListView" ItemsSource="{Binding CitiesView}" 
+                  ItemTemplate="{StaticResource CityTemplateKey}"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+        </ListView>
+
+        <StatusBar Grid.Row="1">
+            <StatusBarItem>
+                <TextBlock>
+                    <Run Text="{x:Static local:Loc.Thread_Id}"/>
+                    <Run Text=":"/>
+                    <Run Text="{Binding Source={x:Static sys:Environment.CurrentManagedThreadId}, StringFormat='{}{0}', Mode=OneTime}"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem Visibility="{Binding UseWindowManager, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock>
+                    <Run Text="{x:Static local:Loc.Documents_Opened}"/>
+                    <Run Text=":"/>
+                    <Run Text="{Binding WindowManagerService.Count, FallbackValue={x:Null}, Mode=OneWay}"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator Visibility="{Binding UseWindowManager, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <StatusBarItem Visibility="{Binding UseWindowManager, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <TextBlock>
+                    <Run Text="{x:Static local:Loc.Active_Document}"/>
+                    <Run Text=":"/>
+                    <Run Text="{Binding WindowManagerService.ActiveDocument.Title, FallbackValue={x:Null}, Mode=OneWay}"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator Visibility="{Binding UseWindowManager, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            <StatusBarItem Visibility="{Binding UseWindowManager, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <TextBlock>
+                    <Run Text="{x:Static local:Loc.Windows_Opened}"/>
+                    <Run Text=":"/>
+                    <Run Text="{Binding Count, Source={StaticResource AppOpenWindowsService}, Mode=OneWay}"/>
+                </TextBlock>
+            </StatusBarItem>
+            <Separator Visibility="{Binding UseWindowManager, Converter={StaticResource InverseBooleanToVisibilityConverter}}"/>
+            <StatusBarItem>
+                <TextBlock Text="{Binding Source={StaticResource AppBindingProxy}, Path=DataContext.PerformanceMonitor.FormattedUsage, FallbackValue={x:Null}}" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

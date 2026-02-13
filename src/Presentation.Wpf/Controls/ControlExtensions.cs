@@ -1,6 +1,8 @@
-﻿namespace System.Windows.Controls
+﻿using System.Windows.Controls;
+
+namespace Presentation.Wpf.Controls
 {
-    public static class ControlHelper
+    public static class ControlExtensions
     {
         public static void ClearStyle(this Control? control)
         {

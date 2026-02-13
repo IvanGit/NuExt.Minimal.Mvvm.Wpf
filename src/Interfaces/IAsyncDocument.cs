@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Defines an interface for an asynchronous document.
@@ -32,7 +32,7 @@ namespace Minimal.Mvvm.Windows
         /// <summary>
         /// Closes the document asynchronously.
         /// </summary>
-        /// <param name="force">If set to <c>true</c>, forces the document to close. Default is <c>true</c>.</param>
+        /// <param name="force">If set to <see langword="true"/>, forces the document to close without cancellation request. Default is <see langword="true"/>.</param>
         /// <returns>
         /// A <see cref="ValueTask"/> representing the asynchronous operation.
         /// </returns>

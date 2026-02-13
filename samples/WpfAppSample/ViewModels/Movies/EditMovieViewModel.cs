@@ -1,4 +1,4 @@
-﻿using Minimal.Mvvm.Windows;
+﻿using Minimal.Mvvm.Wpf;
 using MovieWpfApp.Models;
 using MovieWpfApp.Services;
 using System.ComponentModel;

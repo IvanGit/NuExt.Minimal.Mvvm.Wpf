@@ -1,5 +1,5 @@
 ﻿using Minimal.Mvvm;
-using Minimal.Mvvm.Windows;
+using Minimal.Mvvm.Wpf;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 using System.Windows;

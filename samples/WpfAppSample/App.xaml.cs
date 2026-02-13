@@ -1,11 +1,14 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Minimal.Mvvm;
-using Minimal.Mvvm.Windows;
+using Minimal.Mvvm.Wpf;
 using MovieWpfApp.Services;
 using MovieWpfApp.ViewModels;
 using NLog;
 using NLog.Extensions.Logging;
+using Presentation.Wpf;
+using Presentation.Wpf.Diagnostics;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -24,7 +27,7 @@ namespace MovieWpfApp
         private readonly CancellationTokenSource _cts = new();
         private readonly bool _createdNew;
         private readonly EventWaitHandle _ewh;
-        private readonly AsyncLifetime _lifetime = new(continueOnCapturedContext: true);
+        private readonly AsyncLifetime _lifetime = new() { ContinueOnCapturedContext = true };
 
         public App()
         {
@@ -33,7 +36,6 @@ namespace MovieWpfApp
             _lifetime.Add(_cts.Cancel);
             ServiceContainer = new ServiceProvider(this);
             TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
-            Dispatcher.UnhandledException += Dispatcher_UnhandledException;
         }
 
         #region Properties
@@ -52,9 +54,9 @@ namespace MovieWpfApp
 
         #region Services
 
-        public EnvironmentService? EnvironmentService => GetService<EnvironmentService>();
+        public EnvironmentService? EnvironmentService => field ??= GetService<EnvironmentService>();
 
-        private OpenWindowsService? OpenWindowsService => GetService<OpenWindowsService>();
+        private OpenWindowsService OpenWindowsService => field ??= GetService<OpenWindowsService>() ?? throw new ArgumentNullException(nameof(OpenWindowsService));
 
         #endregion
 
@@ -65,27 +67,14 @@ namespace MovieWpfApp
             var logger = GetService<ILogger>();
             if (logger?.IsEnabled(LogLevel.Error) == true)
             {
-                logger.LogError(e.Exception, "Dispatcher Unhandled Exception: {Exception}.", e.Exception.Message);
+                logger.LogError(e.Exception, "Application Dispatcher Unhandled Exception: {Exception}.", e.Exception.Message);
             }
             e.Handled = true;
         }
 
-        private async void Application_Exit(object sender, ExitEventArgs e)
+        private void Application_Exit(object sender, ExitEventArgs e)
         {
             var logger = GetService<ILogger>();
-            try
-            {
-                await _lifetime.DisposeAsync();
-            }
-            catch (Exception ex)
-            {
-                if (logger?.IsEnabled(LogLevel.Error) == true)
-                {
-                    logger.LogError(ex, "Application Exit Exception: {Exception}.", ex.Message);
-                }
-                Debug.Fail(ex.Message);
-            }
-
             if (logger?.IsEnabled(LogLevel.Information) == true)
             {
                 logger.LogInformation("Application exited with code {ExitCode}.", e.ApplicationExitCode);
@@ -102,7 +91,8 @@ namespace MovieWpfApp
             var logger = GetService<ILogger>();
             try
             {
-                await OpenWindowsService!.DisposeAsync();
+                await OpenWindowsService.DisposeAsync();
+                Debug.Assert(OpenWindowsService.Count == 0);
             }
             catch (Exception ex)
             {
@@ -122,13 +112,14 @@ namespace MovieWpfApp
                 return;
             }
 
+            ServiceContainer.RegisterService(new DispatcherService() { Name = "AppDispatcherService" });
+
             PresentationTraceSources.Refresh();
             PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
             PresentationTraceSources.DataBindingSource.Listeners.Add(new BindingErrorTraceListener());
 
             var environmentService = new EnvironmentService(AppDomain.CurrentDomain.BaseDirectory, e.Args);
             ServiceContainer.RegisterService(environmentService);
-            _lifetime.AddAsyncDisposable(OpenWindowsService!);
 
             ConfigureLogging(environmentService);
 
@@ -137,9 +128,14 @@ namespace MovieWpfApp
             var logger = GetService<ILogger>();
             logger?.LogInformation("Application started.");
 
+            _lifetime.AddAsyncDisposable(OpenWindowsService);
+
             ServiceContainer.RegisterService(new MoviesService(Path.Combine(environmentService.BaseDirectory, "movies.json")));
 
             var viewModel = new MainWindowViewModel() { ParentViewModel = this };
+            _lifetime.AddBracket(
+                () => viewModel.Disposing += OnDisposingAsync,
+                () => viewModel.Disposing -= OnDisposingAsync);
             try
             {
                 var window = new MainWindow { DataContext = viewModel };
@@ -159,14 +155,22 @@ namespace MovieWpfApp
             _ = Task.Run(() => PerformanceMonitor.RunAsync(_cts.Token), _cts.Token);
         }
 
-        private void Dispatcher_UnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        private async ValueTask OnDisposingAsync(object? sender, EventArgs e, CancellationToken cancellationToken)
         {
             var logger = GetService<ILogger>();
-            if (logger?.IsEnabled(LogLevel.Error) == true)
+            try
             {
-                logger.LogError(e.Exception, "Dispatcher Unhandled Exception: {Exception}.", e.Exception.Message);
+                await _lifetime.DisposeAsync().ConfigureAwait(false);
+                Debug.Assert(OpenWindowsService.Count == 0);
             }
-            e.Handled = true;
+            catch (Exception ex)
+            {
+                if (logger?.IsEnabled(LogLevel.Error) == true)
+                {
+                    logger.LogError(ex, "App Disposing Exception: {Exception}.", ex.Message);
+                }
+                Debug.Fail(ex.Message);
+            }
         }
 
         private void TaskScheduler_UnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)

@@ -136,17 +136,17 @@ namespace Minimal.Mvvm
         }
 
         /// <inheritdoc />
-        protected override void OnInitialize()
+        protected override void InitializeCore()
         {
-            base.OnInitialize();
+            base.InitializeCore();
             PropertyChanged += OnPropertyChanged;
         }
 
         /// <inheritdoc />
-        protected override void OnUninitialize()
+        protected override void UninitializeCore()
         {
             PropertyChanged -= OnPropertyChanged;
-            base.OnUninitialize();
+            base.UninitializeCore();
         }
 
         /// <summary>

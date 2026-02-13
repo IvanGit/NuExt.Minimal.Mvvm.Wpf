@@ -5,14 +5,13 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Threading;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents a base class for control-specific ViewModels, extending the functionality of the <see cref="ViewModelBase"/> class.
     /// </summary>
-    public partial class ControlViewModel : ViewModelBase, IControlViewModel, IAsyncDisposable
+    public partial class ControlViewModel : ViewModelBase, IControlViewModel
     {
 #if NET9_0_OR_GREATER
         private enum States
@@ -24,7 +23,7 @@ namespace Minimal.Mvvm.Windows
 
         private volatile States _state;
 #else
-        private class States
+        private static class States
         {
             public const int NotDisposed = 0;// default value of _state
             public const int Disposing = 1;
@@ -34,36 +33,23 @@ namespace Minimal.Mvvm.Windows
         private volatile int _state;
 #endif
 
-        public ControlViewModel()
+        public ControlViewModel() : this(fallbackServices: null)
         {
-            if (IsInDesignMode)
+        }
+
+        public ControlViewModel(IServiceContainer? fallbackServices) : base(fallbackServices)
+        {
+            if (ViewModelHelper.IsInDesignMode)
             {
                 return;
             }
+            Lifetime.AddBracket(() => Disposing += OnDisposing, () => Disposing -= OnDisposing);
             Lifetime.AddBracket(() => PropertyChanged += OnPropertyChanged, () => PropertyChanged -= OnPropertyChanged);
             Lifetime.AddBracket(CreateCommands, NullifyCommands);//operation after WaitAsyncCommands
             Lifetime.AddAsync(() => WaitAsyncCommands());
         }
 
         #region Properties
-
-        /// <summary>
-        /// Gets the dispatcher associated with the UI thread.
-        /// </summary>
-        public Dispatcher Dispatcher { get; } = Dispatcher.CurrentDispatcher;
-
-        private static bool? s_isInDesignMode;
-        /// <summary>
-        /// Gets a value indicating whether the ViewModel is in design mode.
-        /// </summary>
-        public static bool IsInDesignMode
-        {
-            get
-            {
-                s_isInDesignMode ??= (bool)DesignerProperties.IsInDesignModeProperty.GetMetadata(typeof(DependencyObject)).DefaultValue;
-                return s_isInDesignMode.Value;
-            }
-        }
 
         /// <summary>
         /// Gets or sets the display name of the ViewModel, primarily used for debugging purposes.
@@ -73,31 +59,73 @@ namespace Minimal.Mvvm.Windows
         /// <summary>
         /// Gets a value indicating whether the ViewModel has been disposed.
         /// </summary>
+        /// <remarks>
+        /// This property is thread-safe for reading.
+        /// </remarks>
         public bool IsDisposed => _state == States.Disposed;
 
         /// <summary>
         /// Gets a value indicating whether the ViewModel is currently disposing.
         /// </summary>
+        /// <remarks>
+        /// This property is thread-safe for reading.
+        /// </remarks>
         public bool IsDisposing => _state == States.Disposing;
 
         /// <summary>
-        /// Gets a value indicating whether the object is usable.
+        /// Gets a value indicating whether the ViewModel is currently disposing or has been disposed.
         /// </summary>
         /// <remarks>
-        /// The object is considered usable if it has been initialized and 
-        /// is neither in the process of being disposed nor already disposed.
-        /// This property ensures that the object is in a valid state for operations.
+        /// This property is thread-safe for reading.
         /// </remarks>
-        public bool IsUsable => IsInitialized && IsDisposed == false && IsDisposing == false;
+        protected bool IsDisposingOrDisposed => _state != States.NotDisposed;
+
+        /// <summary>
+        /// Gets a value indicating whether the ViewModel is usable.
+        /// </summary>
+        /// <remarks>
+        /// The ViewModel is considered usable if it has been initialized and 
+        /// is neither in the process of being disposed nor already disposed.
+        /// This property ensures that the ViewModel is in a valid state for operations.
+        /// </remarks>
+        public bool IsUsable => IsInitialized && !IsDisposingOrDisposed;
 
         /// <summary>
         /// Gets the contract for managing the asynchronous lifecycle of resources and actions.
         /// </summary>
-        protected AsyncLifetime Lifetime { get; } = new(continueOnCapturedContext: true);
+        protected AsyncLifetime Lifetime { get; } = new AsyncLifetime() { ContinueOnCapturedContext = true }
+#if DEBUG
+            .SetDebugInfo()
+#endif
+            ;
+
+        #endregion
+
+        #region Services
+
+        /// <summary>
+        /// Gets the <see cref="IDispatcherService"/> associated with the UI thread.
+        /// </summary>
+        private IDispatcherService? DispatcherService => field ??= GetService<IDispatcherService>();
+
+        #endregion
+
+        #region Events
+
+        /// <summary>
+        /// Occurs when the ViewModel starts the disposing process asynchronously.
+        /// </summary>
+        public event AsyncEventHandler? Disposing;
 
         #endregion
 
         #region Event Handlers
+
+        private ValueTask OnDisposing(object? sender, EventArgs e, CancellationToken cancellationToken)
+        {
+            CancelAsyncCommands();
+            return ValueTask.CompletedTask;
+        }
 
         private void OnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -105,15 +133,14 @@ namespace Minimal.Mvvm.Windows
 
             switch (e.PropertyName)
             {
-                case nameof(IsDisposing) when IsDisposing:
-                    CancelAsyncCommands();
-                    goto case nameof(IsDisposing);
                 case nameof(IsInitialized):
                 case nameof(IsDisposed):
                 case nameof(IsDisposing):
                     OnPropertyChanged(EventArgsCache.IsUsablePropertyChanged);
                     break;
-
+                case nameof(IsUsable):
+                    RaiseCanExecuteChanged();
+                    break;
             }
         }
 
@@ -122,17 +149,71 @@ namespace Minimal.Mvvm.Windows
         #region Methods
 
         /// <summary>
-        /// Checks if the object has been disposed and throws an <see cref="ObjectDisposedException"/> if it has.
+        /// Checks if the ViewModel has been disposed and throws an <see cref="ObjectDisposedException"/> if it has.
         /// </summary>
+        /// <exception cref="ObjectDisposedException">
+        /// Thrown when the ViewModel is already disposed.
+        /// </exception>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected void CheckDisposed()
         {
             if (IsDisposed)
             {
-                var message = $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({GetHashCode()}) has been disposed.";
+                var message = $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}) has been disposed.";
                 Trace.WriteLine(message);
                 Debug.Fail(message);
                 Throw.ObjectDisposedException(this, message);
+            }
+        }
+
+        /// <summary>
+        /// Checks if the ViewModel has been disposed or is in the process of disposing.
+        /// Throws an <see cref="ObjectDisposedException"/> if either condition is true.
+        /// </summary>
+        /// <remarks>
+        /// This method provides a stronger guarantee than <see cref="CheckDisposed"/> by also
+        /// validating that the ViewModel is not currently in the disposal process, which helps
+        /// prevent race conditions during asynchronous disposal.
+        /// </remarks>
+        /// <exception cref="ObjectDisposedException">
+        /// Thrown when the ViewModel is either already disposed or currently being disposed.
+        /// </exception>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected void CheckDisposingOrDisposed()
+        {
+            if (IsDisposingOrDisposed)
+            {
+#if DEBUG
+                var message = $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}) is being disposed or already disposed.";
+                Trace.WriteLine(message);
+                Debug.Fail(message);
+#endif
+                Throw.ObjectDisposedException(this);
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override bool CanSetProperty<T>(T oldValue, T newValue, [CallerMemberName] string? propertyName = null)
+        {
+            return !IsDisposed && base.CanSetProperty(oldValue, newValue, propertyName);
+        }
+
+        protected virtual ValueTask CleanupServicesAsync()
+        {
+            if (!IsServicesCreated)
+            {
+                return ValueTask.CompletedTask;
+            }
+            return new ValueTask(Services.CleanupAsync(CleanupServiceAsync, continueOnCapturedContext: true));
+
+            static Task CleanupServiceAsync(object service)
+            {
+                if (service is IAsyncDisposable asyncDisposable)
+                {
+                    return asyncDisposable.DisposeAsync().AsTask();
+                }
+                (service as IDisposable)?.Dispose();
+                return Task.CompletedTask;
             }
         }
 
@@ -156,24 +237,36 @@ namespace Minimal.Mvvm.Windows
             try
             {
                 ValidateDisposingState();
-                //https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/implementing-disposeasync
-                await DisposeAsyncCore().ConfigureAwait(false);
+                if (Disposing is { } disposing)
+                {
+                    await disposing.InvokeAsync(this, EventArgs.Empty, continueOnCapturedContext: true);
+                }
+                await DisposeAsyncCore();
+                await CleanupServicesAsync();
                 ValidateFinalState();
+                if (Disposing != null)
+                {
+                    var message = $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}): {nameof(Disposing)} is not null";
+                    Trace.WriteLine(message);
+                    Debug.Fail(message);
+                }
             }
             catch (Exception ex)
             {
-                string errorMessage = $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({GetHashCode()}):{Environment.NewLine}{ex.Message}";
+                string errorMessage = $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}):{Environment.NewLine}{ex.Message}";
                 Trace.WriteLine(errorMessage);
                 Debug.Fail(errorMessage);
                 throw;
             }
             finally
             {
+                Disposing = null;
                 _state = States.Disposed;
+                GC.SuppressFinalize(this);
                 OnPropertyChanged(EventArgsCache.IsDisposingPropertyChanged);
                 OnPropertyChanged(EventArgsCache.IsDisposedPropertyChanged);
+                ClearPropertyChangedHandlers();// Clear all event subscribers to prevent memory leaks
             }
-            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -183,6 +276,16 @@ namespace Minimal.Mvvm.Windows
         protected virtual ValueTask DisposeAsyncCore()
         {
             return Lifetime.DisposeAsync();
+        }
+
+        /// <summary>
+        /// When overridden in a derived class, asynchronously performs the uninitialization logic for the ViewModel.
+        /// This method always calls <see cref="DisposeAsync"/> to ensure proper resource cleanup,
+        /// regardless of the cancellation state.
+        /// </summary>
+        protected override Task UninitializeAsyncCore(CancellationToken cancellationToken)
+        {
+            return InvokeAsync(() => DisposeAsync().AsTask());
         }
 
         /// <summary>
@@ -196,13 +299,48 @@ namespace Minimal.Mvvm.Windows
         }
 
         /// <summary>
-        /// When overridden in a derived class, asynchronously performs the uninitialization logic for the ViewModel.
-        /// This method always calls <see cref="DisposeAsync"/> to ensure proper resource cleanup,
-        /// regardless of the cancellation state.
+        /// Gets the <see cref="IDispatcherService"/> associated with the UI thread.
         /// </summary>
-        protected override Task UninitializeAsyncCore(CancellationToken cancellationToken)
+        /// <exception cref="InvalidOperationException">Thrown when the <see cref="IDispatcherService"/> is not registered.</exception>
+        protected virtual IDispatcherService GetDispatcherService()
         {
-            return InvokeAsync(() => DisposeAsync().AsTask());
+            var dispatcherService = DispatcherService;
+            Debug.Assert(dispatcherService != null, $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}): IDispatcherService is not registered.");
+             _ = dispatcherService ?? throw new InvalidOperationException($"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}): IDispatcherService is not registered.");
+            return dispatcherService;
+        }
+
+        /// <summary>
+        /// Gets the Window associated with the <see cref="ControlViewModel"/>.
+        /// </summary>
+        /// <returns><see cref="Window"/> or <see langword="null"/>.</returns>
+        protected virtual Window? GetWindow()
+        {
+            return GetService<WindowService>()?.Window;
+        }
+
+        ///<inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool CheckAccess()
+        {
+            return GetDispatcherService().CheckAccess();
+        }
+
+        ///<inheritdoc/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void VerifyAccess()
+        {
+            if (!CheckAccess())
+            {
+                ThrowInvalidThreadAccess();
+            }
+            return;
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            static void ThrowInvalidThreadAccess()
+            {
+                throw new InvalidOperationException("The calling thread cannot access this object because a different thread owns it.");
+            }
         }
 
         #endregion

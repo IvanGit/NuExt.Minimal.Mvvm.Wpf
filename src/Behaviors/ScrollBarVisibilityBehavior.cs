@@ -1,14 +1,15 @@
-﻿using System.Diagnostics;
+﻿using Minimal.Behaviors.Wpf;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// A behavior that monitors the visibility of scroll bars in a <see cref="ScrollViewer"/> and updates attached properties accordingly.
     /// </summary>
-    public class ScrollBarVisibilityBehavior : EventTriggerBase<Control>
+    public class ScrollBarVisibilityBehavior : EventBehavior<Control>
     {
         static ScrollBarVisibilityBehavior()
         {
@@ -147,7 +148,7 @@ namespace Minimal.Mvvm.Windows
         /// </summary>
         /// <param name="sender">The source of the event.</param>
         /// <param name="eventArgs">The event data.</param>
-        protected override void OnEvent(object? sender, object? eventArgs)
+        protected override void OnEventCore(object? sender, object? eventArgs)
         {
             if (eventArgs is ScrollChangedEventArgs { OriginalSource: ScrollViewer scrollViewer })
             {

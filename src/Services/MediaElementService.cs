@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     public sealed partial class MediaElementService : ServiceBase<MediaElement>, IMediaElementService
     {
@@ -14,7 +14,7 @@ namespace Minimal.Mvvm.Windows
 
         public MediaElementService()
         {
-            if (ControlViewModel.IsInDesignMode) return;
+            if (ViewModelHelper.IsInDesignMode) return;
 
             PlayCommand = new RelayCommand(Play, CanPlay);
             PauseCommand = new RelayCommand(Pause, CanPauseInternal);
@@ -155,7 +155,11 @@ namespace Minimal.Mvvm.Windows
             {
                 return null;
             }
-            var lifetime = new Lifetime();
+            var lifetime = new Lifetime()
+#if DEBUG
+                    .SetDebugInfo()
+#endif
+                ;
             lifetime.AddBracket(
                 () => mediaElement.BufferingStarted += OnBufferingStarted,
                 () => mediaElement.BufferingStarted -= OnBufferingStarted);

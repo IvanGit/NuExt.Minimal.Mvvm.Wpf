@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Presentation.Wpf;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -6,7 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides window placement services, allowing for the restoration and saving of window placement.

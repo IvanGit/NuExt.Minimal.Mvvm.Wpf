@@ -1,10 +1,9 @@
-﻿#if NETFRAMEWORK || WINDOWS
-using System;
-using System.Diagnostics;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Windows.Data;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// An abstract base class for implementing value converters in WPF, providing a generic way 
@@ -13,7 +12,6 @@ namespace Minimal.Mvvm.Windows
     /// <typeparam name="TFrom">The type of the input value.</typeparam>
     /// <typeparam name="TTo">The type of the output value.</typeparam>
     /// <typeparam name="TParameter">The type of the parameter used in conversion.</typeparam>
-    [DebuggerStepThrough]
     public abstract class ValueConverterBase<TFrom, TTo, TParameter> : IValueConverter
     {
         /// <summary>
@@ -24,9 +22,9 @@ namespace Minimal.Mvvm.Windows
         /// <param name="parameter">The converter parameter to use.</param>
         /// <param name="culture">The culture to use in the converter.</param>
         /// <returns>A converted value. If the method returns null, the valid null value is used.</returns>
-        object? IValueConverter.Convert(object? value, Type targetType, object? parameter, CultureInfo? culture)
+        object? IValueConverter.Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            Cast<TTo>.ThrowIfNotIsAssignableFrom(targetType);
+            Cast<TTo>.ValidateTargetType(targetType);
             var v = Cast<TFrom>.To(value, false);
             var p = Cast<TParameter>.To(parameter, false);
             return ConvertTo(v, p, culture);
@@ -40,9 +38,9 @@ namespace Minimal.Mvvm.Windows
         /// <param name="parameter">The converter parameter to use.</param>
         /// <param name="culture">The culture to use in the converter.</param>
         /// <returns>A converted value. If the method returns null, the valid null value is used.</returns>
-        object? IValueConverter.ConvertBack(object? value, Type targetType, object? parameter, CultureInfo? culture)
+        object? IValueConverter.ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            Cast<TFrom>.ThrowIfNotIsAssignableFrom(targetType);
+            Cast<TFrom>.ValidateTargetType(targetType);
             var v = Cast<TTo>.To(value, false);
             var p = Cast<TParameter>.To(parameter, false);
             return ConvertFrom(v, p, culture);
@@ -55,7 +53,11 @@ namespace Minimal.Mvvm.Windows
         /// <param name="parameter">The converter parameter to use.</param>
         /// <param name="culture">The culture to use in the converter.</param>
         /// <returns>A converted value.</returns>
-        protected abstract TTo ConvertTo(TFrom value, TParameter parameter, CultureInfo? culture);
+        [return: MaybeNull]
+        protected abstract TTo ConvertTo(
+            [AllowNull] TFrom value,
+            [AllowNull] TParameter parameter,
+            CultureInfo culture);
 
         /// <summary>
         /// Converts a value from the target type back to the source type.
@@ -66,10 +68,13 @@ namespace Minimal.Mvvm.Windows
         /// <param name="parameter">The converter parameter to use.</param>
         /// <param name="culture">The culture to use in the converter.</param>
         /// <returns>A converted value.</returns>
-        protected virtual TFrom ConvertFrom(TTo value, TParameter parameter, CultureInfo? culture)
+        [return: MaybeNull]
+        protected virtual TFrom ConvertFrom(
+            [AllowNull] TTo value,
+            [AllowNull] TParameter parameter,
+            CultureInfo culture)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException($"ConvertBack is not supported by {GetType().Name}. Override ConvertFrom to implement backward conversion.");
         }
     }
 }
-#endif

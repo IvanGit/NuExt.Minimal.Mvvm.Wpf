@@ -1,5 +1,5 @@
 ﻿using Minimal.Mvvm;
-using Minimal.Mvvm.Windows;
+using Minimal.Mvvm.Wpf;
 using MovieWpfApp.Models;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -16,12 +16,6 @@ namespace MovieWpfApp.ViewModels
         private bool _isWindowed;
 
         public MovieModel Movie => (MovieModel)Parameter!;
-
-        #endregion
-
-        #region Services
-
-        private WindowService? WindowService => GetService<WindowService>();
 
         #endregion
 
@@ -43,7 +37,7 @@ namespace MovieWpfApp.ViewModels
         {
             VerifyAccess();
 
-            var dialogResult = MessageBox.Show(WindowService?.Window, string.Format(Loc.Are_you_sure_you_want_to_close__Arg0__, Movie.Name), Loc.Confirmation,
+            var dialogResult = MessageBox.Show(GetWindow(), string.Format(Loc.Are_you_sure_you_want_to_close__Arg0__, Movie.Name), Loc.Confirmation,
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (dialogResult != MessageBoxResult.Yes)
             {

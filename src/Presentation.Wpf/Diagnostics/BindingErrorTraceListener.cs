@@ -1,7 +1,8 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 using System.Windows;
 
-namespace System.Diagnostics
+namespace Presentation.Wpf.Diagnostics
 {
     /// <summary>
     /// A custom <see cref="TraceListener"/> that captures binding errors and displays them in a message box.

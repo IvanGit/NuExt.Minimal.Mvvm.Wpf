@@ -1,13 +1,16 @@
-﻿using System;
+﻿using Minimal.Behaviors.Wpf;
+using Presentation.Wpf;
+using Presentation.Wpf.Controls;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// A behavior that enables multiple selection in a ComboBox.
@@ -136,7 +139,7 @@ namespace Minimal.Mvvm.Windows
             {
                 return;
             }
-            var list = comboBoxItems as IList<ComboBoxItem> ?? comboBoxItems.ToList();
+            var list = comboBoxItems as IList<ComboBoxItem> ?? [.. comboBoxItems];
 
             var selectedItems = new List<object>();
             foreach (var comboBoxItem in list)
@@ -181,7 +184,7 @@ namespace Minimal.Mvvm.Windows
             {
                 return;
             }
-            var list = comboBoxItems as IList<ComboBoxItem> ?? comboBoxItems.ToList();
+            var list = comboBoxItems as IList<ComboBoxItem> ?? [.. comboBoxItems];
 
             var checkBoxItems = new CheckBox?[list.Count];
             for (int i = 0; i < list.Count; i++)
@@ -242,7 +245,11 @@ namespace Minimal.Mvvm.Windows
         /// <param name="comboBox">The ComboBox control.</param>
         private Lifetime SubscribeComboBox(ComboBox comboBox)
         {
-            var lifetime = new Lifetime();
+            var lifetime = new Lifetime()
+#if DEBUG
+                    .SetDebugInfo()
+#endif
+                ;
 
             lifetime.AddBracket(() => comboBox.DropDownOpened += OnComboBoxDropDownOpened,
                 () => comboBox.DropDownOpened -= OnComboBoxDropDownOpened);

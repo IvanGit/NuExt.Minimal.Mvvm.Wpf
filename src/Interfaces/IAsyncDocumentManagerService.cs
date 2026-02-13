@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents the event arguments for the ActiveDocumentChanged event.
@@ -15,7 +15,7 @@ namespace Minimal.Mvvm.Windows
     /// <summary>
     /// Defines an interface for managing asynchronous documents.
     /// </summary>
-    public interface IAsyncDocumentManagerService
+    public interface IAsyncDocumentManagerService : INamedService
     {
         /// <summary>
         /// Creates a new asynchronous document.
@@ -28,6 +28,7 @@ namespace Minimal.Mvvm.Windows
         /// <returns>
         /// A task that represents the asynchronous operation. The task result contains the created asynchronous document.
         /// </returns>
+        /// <exception cref="OperationCanceledException">Thrown if the operation is cancelled.</exception>
         ValueTask<IAsyncDocument> CreateDocumentAsync(string? documentType, object? viewModel, object? parentViewModel,
             object? parameter, CancellationToken cancellationToken = default);
 
@@ -50,5 +51,11 @@ namespace Minimal.Mvvm.Windows
         /// Gets a collection of all open asynchronous documents.
         /// </summary>
         IEnumerable<IAsyncDocument> Documents { get; }
+
+        /// <summary>
+        /// Closes all documents asynchronously.
+        /// </summary>
+        /// <returns>A <see cref="ValueTask"/> representing the asynchronous operation.</returns>
+        ValueTask CloseAllAsync();
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides a base class for view models that represent document content. 
@@ -15,7 +15,7 @@ namespace Minimal.Mvvm.Windows
         /// Gets or sets the title of the document.
         /// </summary>
         [Notify]
-        private string? _title;
+        private string _title = string.Empty;
 
         #endregion
 
@@ -25,7 +25,7 @@ namespace Minimal.Mvvm.Windows
         /// Determines whether the document can be closed. Override this method to provide custom close logic.
         /// </summary>
         /// <param name="cancellationToken">A token to cancel the operation.</param>
-        /// <returns>True if the document can be closed; otherwise, false.</returns>
+        /// <returns><see langword="true"/> if the document can be closed; otherwise, <see langword="false"/>.</returns>
         public virtual ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken)
         {
             return new ValueTask<bool>(true);

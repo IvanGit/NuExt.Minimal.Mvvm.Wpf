@@ -1,4 +1,7 @@
-﻿namespace System.Windows
+﻿using System;
+using System.Windows;
+
+namespace Presentation.Wpf.Data
 {
     /// <summary>
     /// Passes DataContext between elements without a direct binding path. 
@@ -59,7 +62,6 @@
         /// This method is required by the <see cref="Freezable"/> base class.
         /// </summary>
         /// <returns>A new instance of <see cref="BindingProxy{T}"/>.</returns>
-        /// <seealso cref="Freezable.CreateInstanceCore()"/>
         protected override Freezable CreateInstanceCore()
         {
             return (Freezable)Activator.CreateInstance(GetType())!;

@@ -1,0 +1,71 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-windows;net9.0-windows;net8.0-windows;net471;net462</TargetFrameworks>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+    <PackageTags>nuext;minimal;mvvm;wpf;ui;windows;viewmodel;command;relaycommand;asynccommand;multiple;concurrent;async;servicecontainer;asyncdocument;documentservice</PackageTags>
+    <Description>NuExt.Minimal.Mvvm.Wpf is an extension for the lightweight MVVM framework NuExt.Minimal.Mvvm, specifically designed for WPF applications.
+
+Commonly Used Types:
+Minimal.Mvvm.ModelBase
+Minimal.Mvvm.Wpf.ControlViewModel
+Minimal.Mvvm.Wpf.DocumentContentViewModelBase
+Minimal.Mvvm.Wpf.WindowViewModel
+Minimal.Mvvm.Wpf.IAsyncDialogService
+Minimal.Mvvm.Wpf.IAsyncDocument
+Minimal.Mvvm.Wpf.IAsyncDocumentContent
+Minimal.Mvvm.Wpf.IAsyncDocumentManagerService
+Minimal.Mvvm.Wpf.InputDialogService
+Minimal.Mvvm.Wpf.OpenWindowsService
+Minimal.Mvvm.Wpf.SettingsService
+Minimal.Mvvm.Wpf.TabbedDocumentService
+Minimal.Mvvm.Wpf.ViewLocator
+Minimal.Mvvm.Wpf.WindowedDocumentService
+Minimal.Mvvm.Wpf.WindowPlacementService</Description>
+    <Version>0.7.0</Version>
+    <RootNamespace>Minimal.Mvvm.Wpf</RootNamespace>
+    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591;NETSDK1233</NoWarn>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>logo128.png</PackageIcon>
+    <PackageProjectUrl>https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf</PackageProjectUrl>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="$(MSBuildProjectName).Benchmarks" Key="0024000004800000940000000602000000240000525341310004000001000100b789a2ca53134810a04b9629da17625466eca3b89758bedfe43ebb1ed321c10eb969c265dbfe73e8fa34a63a30246654a4db84f23112d88b7f2a61573784f338af6d225b994a3ff0aa17db7faadb09edda35a28a5569a7e389fa501a23215d30987200702b22b86b36becc3780770256448a230c38bbdc0ba30fb21faeae5fbc" />
+		<InternalsVisibleTo Include="$(MSBuildProjectName).Tests" Key="0024000004800000940000000602000000240000525341310004000001000100b789a2ca53134810a04b9629da17625466eca3b89758bedfe43ebb1ed321c10eb969c265dbfe73e8fa34a63a30246654a4db84f23112d88b7f2a61573784f338af6d225b994a3ff0aa17db7faadb09edda35a28a5569a7e389fa501a23215d30987200702b22b86b36becc3780770256448a230c38bbdc0ba30fb21faeae5fbc" />
+	</ItemGroup>
+	
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.CsWin32" Version="0.3.269">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseNuExtPackages)' == 'true'">
+    <PackageReference Include="NuExt.Minimal.Mvvm" Version="0.7.0" />
+    <PackageReference Include="NuExt.Minimal.Behaviors.Wpf" Version="0.7.1" />
+    <PackageReference Include="NuExt.System" Version="0.7.0" />
+    <PackageReference Include="NuExt.Minimal.Mvvm.SourceGenerator" Version="0.7.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseNuExtPackages)' == 'false'">
+    <ProjectReference Include="..\..\NuExt.Minimal.Mvvm\src\NuExt.Minimal.Mvvm.csproj" />
+    <ProjectReference Include="..\..\NuExt.Minimal.Behaviors.Wpf\src\NuExt.Minimal.Behaviors.Wpf.csproj" />
+    <ProjectReference Include="..\..\NuExt.System\src\NuExt.System.csproj" />
+    <ProjectReference Include="..\..\NuExt.Minimal.Mvvm.SourceGenerator\src\NuExt.Minimal.Mvvm.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\logo128.png" Pack="true" PackagePath="\" />
+    <None Include=".\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

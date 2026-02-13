@@ -1,4 +1,7 @@
-﻿namespace System.Windows.Controls
+﻿using System.Windows;
+using System.Windows.Controls;
+
+namespace Presentation.Wpf.Templating
 {
     /// <summary>
     /// A DataTemplateSelector for a ComboBox that selects different templates
@@ -22,10 +25,10 @@
         /// <param name="item">The data object being templated.</param>
         /// <param name="container">The container in which the data object is displayed.</param>
         /// <returns>A DataTemplate to apply to the given item.</returns>
-        public override DataTemplate? SelectTemplate(object item, DependencyObject container)
+        public override DataTemplate? SelectTemplate(object? item, DependencyObject container)
         {
-            var comboBoxItem = container.FindParent<ComboBoxItem>();
-            return comboBoxItem != null ? DropDownDataTemplate : SelectionDataTemplate;
+            var isInDropDown = container.FindAncestor<ComboBoxItem>() is not null;
+            return isInDropDown ? DropDownDataTemplate : SelectionDataTemplate;
         }
     }
 }

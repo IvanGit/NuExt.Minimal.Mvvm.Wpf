@@ -10,9 +10,8 @@ using System.Windows.Markup;
                                                 // app, or any theme specific resource dictionaries)
 )]
 
-[assembly: XmlnsPrefix("http://schemas.minimalmvvm.com/winfx/xaml/mvvm", "minimal")]
-[assembly: XmlnsDefinition("http://schemas.minimalmvvm.com/winfx/xaml/mvvm", "Minimal.Mvvm")]
-[assembly: XmlnsDefinition("http://schemas.minimalmvvm.com/winfx/xaml/mvvm", "Minimal.Mvvm.Windows")]
-[assembly: XmlnsDefinition("http://schemas.minimalmvvm.com/winfx/xaml/mvvm", "Minimal.Mvvm.Windows.Controls")]
-[assembly: XmlnsDefinition("http://schemas.microsoft.com/winfx/2006/xaml/presentation", "System.Windows")]
-[assembly: XmlnsDefinition("http://schemas.microsoft.com/winfx/2006/xaml/presentation", "System.Windows.Controls")]
+[assembly: XmlnsPrefix("http://schemas.nuext.minimal/xaml", "minimal")]
+[assembly: XmlnsDefinition("http://schemas.nuext.minimal/xaml", "Minimal.Mvvm")]
+[assembly: XmlnsDefinition("http://schemas.nuext.minimal/xaml", "Minimal.Mvvm.Wpf")]
+[assembly: XmlnsDefinition("http://schemas.nuext.minimal/xaml", "Minimal.Mvvm.Wpf.Controls")]
+[assembly: XmlnsDefinition("http://schemas.nuext.minimal/xaml", "Presentation.Wpf.Templating")]

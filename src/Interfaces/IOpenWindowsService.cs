@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Interface providing methods to manage open windows in the application.
@@ -10,6 +10,11 @@ namespace Minimal.Mvvm.Windows
     /// </summary>
     public interface IOpenWindowsService : IAsyncDisposable
     {
+        /// <summary>
+        /// Gets the count of registered window view models.
+        /// </summary>
+        int Count { get; }
+
         /// <summary>
         /// Gets the collection of registered window view models.
         /// </summary>

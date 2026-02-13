@@ -62,7 +62,8 @@
             </GroupBox>
         </Grid>
 
-        <StackPanel Grid.Row="1" HorizontalAlignment="Right" Visibility="{Binding IsWindowed, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <StackPanel Grid.Row="1" HorizontalAlignment="Right" 
+                    Visibility="{Binding IsWindowed, Converter={StaticResource BooleanToVisibilityConverter}}">
             <Button Margin="0 5 5 5" MinHeight="25" MinWidth="50" UseLayoutRounding="True"
                     Command="{Binding CloseCommand}"
                     Content="{x:Static local:Loc.Close}" />

@@ -1,0 +1,18 @@
+﻿<Application x:Class="WpfMultiThreadedApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:WpfMultiThreadedApp"
+             xmlns:minimal="http://schemas.nuext.minimal/xaml"
+             Startup="Application_Startup" Exit="Application_Exit" 
+             DispatcherUnhandledException="Application_DispatcherUnhandledException" 
+             SessionEnding="Application_SessionEnding">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/Generic.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <local:AppBindingProxy x:Key="AppBindingProxy" DataContext="{x:Static local:App.Current}" />
+            <minimal:OpenWindowsService x:Key="AppOpenWindowsService"/>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

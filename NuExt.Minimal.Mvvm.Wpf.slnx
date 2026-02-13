@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="samples/WpfAppSample/MovieWpfApp.csproj" />
+  <Project Path="samples/WpfMultiThreadedApp/WpfMultiThreadedApp.csproj" />
+  <Project Path="benchmarks/NuExt.Minimal.Mvvm.Wpf.Benchmarks.csproj" />
+  <Project Path="src/NuExt.Minimal.Mvvm.Wpf.csproj" />
+  <Project Path="tests/NuExt.Minimal.Mvvm.Wpf.Tests.csproj" />
+</Solution>

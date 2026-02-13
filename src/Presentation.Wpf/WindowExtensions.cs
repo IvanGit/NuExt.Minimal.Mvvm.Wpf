@@ -1,8 +1,10 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Windows;
 using System.Windows.Interop;
 
-namespace System.Windows
+namespace Presentation.Wpf
 {
     /// <summary>
     /// The <see cref="WindowExtensions"/> class provides extension methods for the <see cref="Window"/> class,
@@ -48,7 +50,7 @@ namespace System.Windows
         /// </summary>
         /// <param name="window">The instance of the <see cref="Window"/>.</param>
         /// <returns>An instance of <see cref="WindowPlacement"/> with the current values of the window's placement,
-        /// or <c>null</c> if the operation fails.</returns>
+        /// or <see langword="null"/> if the operation fails.</returns>
         public static WindowPlacement? GetPlacement(this Window window)
         {
             ArgumentNullException.ThrowIfNull(window);
@@ -66,7 +68,7 @@ namespace System.Windows
         /// Retrieves the current placement of the specified window and returns it as a JSON string.
         /// </summary>
         /// <param name="window">The instance of the <see cref="Window"/>.</param>
-        /// <returns>A JSON string representing the current placement of the window, or <c>null</c> if the operation fails.</returns>
+        /// <returns>A JSON string representing the current placement of the window, or <see langword="null"/> if the operation fails.</returns>
         public static string? GetPlacementAsJson(this Window window)
         {
             var windowPlacement = window.GetPlacement();
@@ -83,7 +85,7 @@ namespace System.Windows
         /// </summary>
         /// <param name="window">The instance of the <see cref="Window"/>.</param>
         /// <param name="windowPlacement">An instance of <see cref="WindowPlacement"/> specifying the new values for the window's placement.</param>
-        /// <returns><c>true</c> if the operation is successful, otherwise <c>false</c>.</returns>
+        /// <returns><see langword="true"/> if the operation is successful, otherwise <see langword="false"/>.</returns>
         public static bool SetPlacement(this Window window, WindowPlacement? windowPlacement)
         {
             ArgumentNullException.ThrowIfNull(window);
@@ -106,7 +108,7 @@ namespace System.Windows
         /// </summary>
         /// <param name="window">The instance of the <see cref="Window"/>.</param>
         /// <param name="json">A JSON string representing the desired placement of the window.</param>
-        /// <returns><c>true</c> if the operation is successful, otherwise <c>false</c>.</returns>
+        /// <returns><see langword="true"/> if the operation is successful, otherwise <see langword="false"/>.</returns>
         public static bool SetPlacement(this Window window, string? json)
         {
             if (string.IsNullOrWhiteSpace(json))

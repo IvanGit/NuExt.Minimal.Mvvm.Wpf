@@ -1,20 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides services for managing open window view models within the application.
     /// This service maintains a list of currently open window view models and offers functionality to register,
     /// unregister, and force-close all registered windows asynchronously. It ensures thread safety.
     /// </summary>
-    public sealed class OpenWindowsService() : AsyncDisposable(continueOnCapturedContext: true), IOpenWindowsService
+    public sealed class OpenWindowsService : AsyncDisposable, IOpenWindowsService
     {
         private readonly List<IWindowViewModel> _viewModels = [];
-        private readonly AsyncLock _lock = new();
+        private readonly AsyncLock _lock = new AsyncLock()
+#if DEBUG
+            .SetDebugInfo()
+#endif
+            ;
+
+        public OpenWindowsService()
+        {
+            ContinueOnCapturedContext = true;
+        }
+
+        public int Count => _viewModels.Count;
 
         /// <summary>
         /// Gets open window view models.
@@ -23,7 +35,7 @@ namespace Minimal.Mvvm.Windows
         {
             get
             {
-                CheckDisposedOrDisposing();
+                CheckDisposingOrDisposed();
 
                 _lock.Enter();
                 try
@@ -46,20 +58,27 @@ namespace Minimal.Mvvm.Windows
         public void Register(IWindowViewModel viewModel)
         {
             ArgumentNullException.ThrowIfNull(viewModel);
-            CheckDisposedOrDisposing();
+            CheckDisposingOrDisposed();
 
+            bool added = false;
             _lock.Enter();
             try
             {
-                CheckDisposedOrDisposing();
+                CheckDisposingOrDisposed();
                 if (!_viewModels.Contains(viewModel))
                 {
                     _viewModels.Add(viewModel);
+                    added = true;
                 }
             }
             finally
             {
                 _lock.Exit();
+            }
+
+            if (added)
+            {
+                OnPropertyChanged(EventArgsCache.CountPropertyChanged);
             }
         }
 
@@ -72,20 +91,18 @@ namespace Minimal.Mvvm.Windows
         public void Unregister(IWindowViewModel viewModel)
         {
             ArgumentNullException.ThrowIfNull(viewModel);
-            CheckDisposed();
 
-            if (IsDisposing)//to prevent Unregister call in DisposeAsyncCore->CloseAsync
+            if (IsDisposingOrDisposed)//to prevent Unregister call in DisposeAsyncCore->CloseAsync
             {
                 return;
             }
 
+            bool removed = false;
             _lock.Enter();
             try
             {
-                CheckDisposedOrDisposing();
-
-                bool removed = _viewModels.Remove(viewModel);
-
+                CheckDisposingOrDisposed();
+                removed = _viewModels.Remove(viewModel);
                 if (!removed)
                 {
                     string message = $"{nameof(WindowViewModel)} was not found in the registry: {viewModel}";
@@ -96,6 +113,10 @@ namespace Minimal.Mvvm.Windows
             finally
             {
                 _lock.Exit();
+            }
+            if (removed)
+            {
+                OnPropertyChanged(EventArgsCache.CountPropertyChanged);
             }
         }
 
@@ -110,6 +131,7 @@ namespace Minimal.Mvvm.Windows
             Debug.Assert(CheckAccess());
             VerifyAccess();
 
+            bool removed = false;
             await _lock.EnterAsync();
             try
             {
@@ -119,6 +141,7 @@ namespace Minimal.Mvvm.Windows
                     try
                     {
                         await _viewModels[i].CloseAsync(force: true);
+                        removed = true;
                     }
                     catch (Exception ex)
                     {
@@ -138,7 +161,11 @@ namespace Minimal.Mvvm.Windows
                 _lock.Exit();
             }
             _lock.Dispose();
-        }
 
+            if (removed)
+            {
+                OnPropertyChanged(EventArgsCache.CountPropertyChanged);
+            }
+        }
     }
 }

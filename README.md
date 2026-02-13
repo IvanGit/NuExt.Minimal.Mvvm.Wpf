@@ -1,24 +1,24 @@
-# NuExt.Minimal.Mvvm.Windows
+# NuExt.Minimal.Mvvm.Wpf
 
-`NuExt.Minimal.Mvvm.Windows` is an extension for the lightweight MVVM framework [NuExt.Minimal.Mvvm](https://github.com/IvanGit/NuExt.Minimal.Mvvm). This package is specifically designed to enhance development for WPF applications by providing additional components and utilities that simplify development, reduce routine work, and add functionality to your MVVM applications. A key focus of this package is to offer robust support for asynchronous operations, making it easier to manage complex scenarios involving asynchronous tasks and commands.
+`NuExt.Minimal.Mvvm.Wpf` is an extension for the lightweight MVVM framework [NuExt.Minimal.Mvvm](https://github.com/IvanGit/NuExt.Minimal.Mvvm). This package is specifically designed to enhance development for WPF applications by providing additional components and utilities that simplify development, reduce routine work, and add functionality to your MVVM applications. A key focus of this package is to offer robust support for asynchronous operations, making it easier to manage complex scenarios involving asynchronous tasks and commands.
 
 ### Commonly Used Types
 
 - **`Minimal.Mvvm.ModelBase`**: Base class for creating bindable models.
-- **`Minimal.Mvvm.Windows.ControlViewModel`**: Base class for control-specific ViewModels and designed for asynchronous disposal.
-- **`Minimal.Mvvm.Windows.DocumentContentViewModelBase`**: Base class for ViewModels that represent document content.
-- **`Minimal.Mvvm.Windows.WindowViewModel`**: Base class for window-specific ViewModels.
-- **`Minimal.Mvvm.Windows.IAsyncDialogService`**: Displays dialog windows asynchronously.
-- **`Minimal.Mvvm.Windows.IAsyncDocument`**: Asynchronous document created with `IAsyncDocumentManagerService`.
-- **`Minimal.Mvvm.Windows.IAsyncDocumentContent`**: Asynchronous document content that represent a view model.
-- **`Minimal.Mvvm.Windows.IAsyncDocumentManagerService`**: Manages asynchronous documents.
-- **`Minimal.Mvvm.Windows.InputDialogService`**: Shows modal dialogs asynchronously.
-- **`Minimal.Mvvm.Windows.OpenWindowsService`**: Manages open window ViewModels within the application.
-- **`Minimal.Mvvm.Windows.SettingsService`**: Facilitates saving and loading settings.
-- **`Minimal.Mvvm.Windows.TabbedDocumentService`**: Manages tabbed documents within a UI.
-- **`Minimal.Mvvm.Windows.ViewLocator`**: Locates and initializes views based on view models.
-- **`Minimal.Mvvm.Windows.WindowedDocumentService`**: Manages windowed documents within a UI.
-- **`Minimal.Mvvm.Windows.WindowPlacementService`**: Saves and restores window placement between runs.
+- **`Minimal.Mvvm.Wpf.ControlViewModel`**: Base class for control-specific ViewModels and designed for asynchronous disposal.
+- **`Minimal.Mvvm.Wpf.DocumentContentViewModelBase`**: Base class for ViewModels that represent document content.
+- **`Minimal.Mvvm.Wpf.WindowViewModel`**: Base class for window-specific ViewModels.
+- **`Minimal.Mvvm.Wpf.IAsyncDialogService`**: Displays dialog windows asynchronously.
+- **`Minimal.Mvvm.Wpf.IAsyncDocument`**: Asynchronous document created with `IAsyncDocumentManagerService`.
+- **`Minimal.Mvvm.Wpf.IAsyncDocumentContent`**: Asynchronous document content that represent a view model.
+- **`Minimal.Mvvm.Wpf.IAsyncDocumentManagerService`**: Manages asynchronous documents.
+- **`Minimal.Mvvm.Wpf.InputDialogService`**: Shows modal dialogs asynchronously.
+- **`Minimal.Mvvm.Wpf.OpenWindowsService`**: Manages open window ViewModels within the application.
+- **`Minimal.Mvvm.Wpf.SettingsService`**: Facilitates saving and loading settings.
+- **`Minimal.Mvvm.Wpf.TabbedDocumentService`**: Manages tabbed documents within a UI.
+- **`Minimal.Mvvm.Wpf.ViewLocator`**: Locates and initializes views based on view models.
+- **`Minimal.Mvvm.Wpf.WindowedDocumentService`**: Manages windowed documents within a UI.
+- **`Minimal.Mvvm.Wpf.WindowPlacementService`**: Saves and restores window placement between runs.
 
 ### Recommended Companion Package
 
@@ -26,16 +26,16 @@ For an enhanced development experience, we highly recommend using the [`NuExt.Mi
 
 ### Installation
 
-You can install `NuExt.Minimal.Mvvm.Windows` via [NuGet](https://www.nuget.org/):
+You can install `NuExt.Minimal.Mvvm.Wpf` via [NuGet](https://www.nuget.org/):
 
 ```sh
-dotnet add package NuExt.Minimal.Mvvm.Windows
+dotnet add package NuExt.Minimal.Mvvm.Wpf
 ```
 
 Or through the Visual Studio package manager:
 
 1. Go to `Tools -> NuGet Package Manager -> Manage NuGet Packages for Solution...`.
-2. Search for `NuExt.Minimal.Mvvm.Windows`.
+2. Search for `NuExt.Minimal.Mvvm.Wpf`.
 3. Click "Install".
 
 ### Usage Examples

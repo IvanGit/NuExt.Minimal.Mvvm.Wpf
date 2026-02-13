@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides a base class for localizing message box buttons.

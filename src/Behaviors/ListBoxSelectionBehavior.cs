@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Minimal.Behaviors.Wpf;
+using System;
 using System.Collections;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -6,7 +7,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     public class ListBoxSelectionBehavior : Behavior<ListBox>
     {

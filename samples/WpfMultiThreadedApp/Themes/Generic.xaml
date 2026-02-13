@@ -1,0 +1,128 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:minimal="http://schemas.nuext.minimal/xaml"
+                    xmlns:templating="clr-namespace:WpfMultiThreadedApp.Templating"
+                    xmlns:viewModels="clr-namespace:WpfMultiThreadedApp.ViewModels" 
+                    xmlns:views="clr-namespace:WpfMultiThreadedApp.Views">
+
+    <minimal:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <minimal:BooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" Invert="True" />
+    <minimal:BooleanInverterConverter x:Key="BooleanInverterConverter" />
+
+    <!-- Attached behaviors for City Window -->
+    <DataTemplate x:Key="CityBehaviorsTemplateKey" DataType="{x:Type viewModels:CityTimeZoneViewModel}">
+        <ItemsControl>
+            <minimal:DispatcherService Name="ChildDispatcherService"/>
+            <minimal:WindowService Name="CurrentWindowService" ClosingCommand="{Binding ClosingCommand}"/>
+            <minimal:WindowPlacementService FileName="{Binding Parameter.Name}" 
+                                            DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
+            <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+        </ItemsControl>
+    </DataTemplate>
+
+    <!-- City Window Style -->
+    <Style x:Shared="false" x:Key="CityWindowStyleKey" TargetType="{x:Type Window}">
+        <Setter Property="Height" Value="400"/>
+        <Setter Property="MinHeight" Value="400"/>
+        <Setter Property="Width" Value="500"/>
+        <Setter Property="MinWidth" Value="500"/>
+        <Setter Property="minimal:Interaction.BehaviorsTemplate" Value="{StaticResource CityBehaviorsTemplateKey}"/>
+    </Style>
+
+    <!-- City View Template -->
+    <DataTemplate x:Shared="false" x:Key="CityViewTemplateKey" DataType="{x:Type viewModels:CityTimeZoneViewModel}">
+        <views:CityTimeZoneView/>
+    </DataTemplate>
+
+    <!-- Attached behaviors for MainWindow when using WindowedDocumentService -->
+    <DataTemplate x:Key="WindowManagerDataTemplate" DataType="{x:Type viewModels:MainWindowViewModel}">
+        <ItemsControl>
+            <minimal:WindowService ClosingCommand="{Binding ClosingCommand}"/>
+            <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+            <minimal:WindowPlacementService FileName="MainWindow" 
+                                            DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
+            <minimal:WindowedDocumentService x:Name="Documents" WindowStartupLocation="CenterOwner"
+                                             WindowStyleKey="CityWindowStyleKey" ViewTemplateKey="CityViewTemplateKey"/>
+        </ItemsControl>
+    </DataTemplate>
+
+    <!-- Attached behaviors for MainWindow when using ViewWindowService -->
+    <DataTemplate x:Key="ViewFactoryDataTemplate" DataType="{x:Type viewModels:MainWindowViewModel}">
+        <ItemsControl>
+            <minimal:WindowService ClosingCommand="{Binding ClosingCommand}"/>
+            <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+            <minimal:WindowPlacementService FileName="MainWindow" 
+                                            DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
+            <minimal:ViewWindowService x:Name="Windows" WindowStartupLocation="CenterOwner"
+                                       WindowStyleKey="CityWindowStyleKey" ViewTemplateKey="CityViewTemplateKey"/>
+        </ItemsControl>
+    </DataTemplate>
+
+    <!-- Attached behaviors template selector for switching between using WindowedDocumentService or ViewWindowService in MainWindow -->
+    <templating:BehaviorsTemplateSelector x:Key="BehaviorsTemplateSelectorKey"
+                                          WindowManagerDataTemplate="{StaticResource WindowManagerDataTemplate}"
+                                          ViewFactoryDataTemplate="{StaticResource ViewFactoryDataTemplate}"/>
+
+
+    <DataTemplate x:Key="DateTimeProgressTemplate" DataType="{x:Type viewModels:CityTimeZoneViewModel}">
+        <Grid Margin="10" HorizontalAlignment="Center">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Full Date Display -->
+            <TextBlock Grid.Row="0"
+                   Text="{Binding LocalTime, StringFormat='dd MMMM yyyy'}"
+                   FontSize="18"
+                   Foreground="#666"
+                   HorizontalAlignment="Center"
+                   Margin="0,0,0,5"/>
+
+            <!-- Main Time (Hours & Minutes) -->
+            <TextBlock Grid.Row="1"
+                   Text="{Binding LocalTime, StringFormat='HH:mm'}"
+                   FontSize="48"
+                   FontWeight="Bold"
+                   Foreground="#2196F3"
+                   HorizontalAlignment="Center"/>
+
+            <!-- Seconds and Day of Week -->
+            <StackPanel Grid.Row="2"
+                    Orientation="Horizontal" 
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,10">
+                <TextBlock Text="{Binding LocalTime, StringFormat='ss'}"
+                       FontSize="14"
+                       Foreground="#999"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,2,8"/>
+                <TextBlock Text="{Binding LocalTime, StringFormat='dddd'}"
+                       FontSize="16"
+                       Foreground="#555"
+                       Margin="10,0,0,0"/>
+            </StackPanel>
+
+            <!-- Seconds Progress Bar -->
+            <ProgressBar Grid.Row="3" 
+                     Maximum="60" 
+                     Value="{Binding LocalTime.Second, Mode=OneWay}"
+                     Height="3"
+                     Width="200"
+                     Margin="0,0,0,5"
+                     Background="#E0E0E0"
+                     Foreground="#2196F3"/>
+
+            <!-- Time Zone name -->
+            <TextBlock Grid.Row="4"
+                       Text="{Binding Parameter.TimeZoneInfo.StandardName}"
+                       FontSize="12"
+                       Foreground="#777"
+                       HorizontalAlignment="Center"/>
+        </Grid>
+    </DataTemplate>
+
+</ResourceDictionary>

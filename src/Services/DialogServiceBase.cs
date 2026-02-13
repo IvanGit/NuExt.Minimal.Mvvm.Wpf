@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows;
-using System.Windows.Controls;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// The <c>DialogServiceBase</c> class is an abstract base class designed for creating services 
@@ -59,7 +58,7 @@ namespace Minimal.Mvvm.Windows
         /// <returns>The instance of <see cref="MessageBoxButtonLocalizerBase"/> used to localize message box buttons.</returns>
         protected MessageBoxButtonLocalizerBase GetMessageBoxButtonLocalizer()
         {
-            return MessageBoxButtonLocalizer ?? Windows.MessageBoxButtonLocalizer.Default;
+            return MessageBoxButtonLocalizer ?? Wpf.MessageBoxButtonLocalizer.Default;
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-﻿using Minimal.Mvvm.Windows.Controls;
+﻿using Minimal.Mvvm.Wpf.Controls;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides asynchronous methods to show and manage modal dialogs.
@@ -124,8 +124,6 @@ namespace Minimal.Mvvm.Windows
                 Mode = BindingMode.OneWay
             });
 
-            await ViewModelHelper.InitializeViewAsync(view, viewModel, parentViewModel, parameter, cancellationToken);
-
             if (SetTitleBinding)
             {
                 ViewModelHelper.SetViewTitleBinding(view, Window.TitleProperty, dialog);
@@ -133,6 +131,7 @@ namespace Minimal.Mvvm.Windows
 
             try
             {
+                await ViewModelHelper.InitializeViewAsync(view, viewModel, parentViewModel, parameter, cancellationToken);
                 return dialog.ShowDialog(cancellationToken);
             }
             finally

@@ -1,11 +1,14 @@
-﻿using System;
+﻿using Minimal.Behaviors.Wpf;
+using Presentation.Wpf;
+using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     public class TreeViewDragDropBehavior : Behavior<TreeView>
     {
@@ -160,7 +163,11 @@ namespace Minimal.Mvvm.Windows
             {
                 return null;
             }
-            var lifetime = new Lifetime();
+            var lifetime = new Lifetime()
+#if DEBUG
+                .SetDebugInfo()
+#endif
+                ;
             lifetime.AddBracket(() => treeView.DragOver += OnDragOver, () => treeView.DragOver -= OnDragOver);
             lifetime.AddBracket(() => treeView.Drop += OnDrop, () => treeView.Drop -= OnDrop);
             lifetime.AddBracket(() => treeView.PreviewMouseMove += OnMouseMove, () => treeView.PreviewMouseMove -= OnMouseMove);

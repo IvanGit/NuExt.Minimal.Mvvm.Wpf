@@ -18,8 +18,7 @@ namespace MovieWpfApp.ViewModels
         [Notify(Setter = Private)]
         private void Close()
         {
-            Debug.Assert(WindowService != null, $"{nameof(WindowService)} is null");
-            WindowService?.Close();
+            GetLocalService<IWindowService>()?.Close();
         }
 
         [Notify(Setter = Private)]

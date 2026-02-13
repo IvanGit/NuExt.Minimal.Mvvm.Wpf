@@ -1,9 +1,11 @@
-﻿using System.Diagnostics;
+﻿using Minimal.Behaviors.Wpf;
+using Presentation.Wpf.Controls;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     public class TreeViewSelectedItemBehavior : Behavior<TreeView>
     {

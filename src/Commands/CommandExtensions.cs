@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Input;
 
-namespace Minimal.Mvvm
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides extension methods for handling commands.
@@ -39,8 +39,8 @@ namespace Minimal.Mvvm
                 return;
             }
 
-            // Fallback for non-IRelayCommand: Raise CanExecuteChanged event manually if possible
-            var eventFields = command.GetType().GetAllFields(typeof(object), BindingFlags.Instance | BindingFlags.NonPublic, fi => string.Equals(fi.Name, nameof(ICommand.CanExecuteChanged), StringComparison.OrdinalIgnoreCase));//TODO optimize
+            // Fallback for non-IRelayCommand: Raise CanExecuteChanged event directly if possible
+            var eventFields = command.GetType().GetAllFields(typeof(object), BindingFlags.Instance | BindingFlags.NonPublic, fi => fi.Name.Contains(nameof(ICommand.CanExecuteChanged), StringComparison.OrdinalIgnoreCase));//TODO optimize
             if (eventFields.Count == 0) return;
             if (eventFields[0].GetValue(command) is not EventHandler eventHandler) return;
             eventHandler.Invoke(command, EventArgs.Empty);

@@ -1,5 +1,5 @@
 ﻿using Minimal.Mvvm;
-using Minimal.Mvvm.Windows;
+using Minimal.Mvvm.Wpf;
 using MovieWpfApp.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -94,11 +94,11 @@ namespace MovieWpfApp.ViewModels
 
         #region Methods
 
-        protected override ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken)
+        public override ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken)
         {
             VerifyAccess();
 
-            MessageBoxResult result = MessageBox.Show(WindowService?.Window,
+            MessageBoxResult result = MessageBox.Show(GetWindow(),
                 string.Format(Loc.Are_you_sure_you_want_to_close__Arg0__, $"{AssemblyInfo.Current.Product}"),
                 Loc.Confirmation,
                 MessageBoxButton.YesNo,
@@ -165,8 +165,7 @@ namespace MovieWpfApp.ViewModels
             }
 
             VerifyAccess();
-
-            MessageBox.Show(WindowService?.Window, string.Format(Loc.An_error_has_occurred_in_Arg0_Arg1, callerName, ex.Message), Loc.Error, MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(GetWindow(), string.Format(Loc.An_error_has_occurred_in_Arg0_Arg1, callerName, ex.Message), Loc.Error, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         protected override Task InitializeAsyncCore(CancellationToken cancellationToken)
@@ -176,11 +175,9 @@ namespace MovieWpfApp.ViewModels
             Debug.Assert(MoviesService != null, $"{nameof(MoviesService)} is null");
             Debug.Assert(SettingsService != null, $"{nameof(SettingsService)} is null");
             Debug.Assert(WindowManagerService != null, $"{nameof(WindowManagerService)} is null");
+            Debug.Assert(GetDispatcherService()?.Name == "AppDispatcherService");
 
-            if (DocumentManagerService is IAsyncDisposable asyncDisposable)
-            {
-                Lifetime.AddAsyncDisposable(asyncDisposable);
-            }
+            Lifetime.AddAsync(DocumentManagerService!.CloseAllAsync);
             if (DocumentManagerService is INotifyPropertyChanged notifyPropertyChanged)
             {
                 Lifetime.AddBracket(
@@ -188,10 +185,7 @@ namespace MovieWpfApp.ViewModels
                     () => notifyPropertyChanged.PropertyChanged -= DocumentManagerService_PropertyChanged);
             }
 
-            if (WindowManagerService is IAsyncDisposable asyncDisposable1)
-            {
-                Lifetime.AddAsyncDisposable(asyncDisposable1);
-            }
+            Lifetime.AddAsync(WindowManagerService!.CloseAllAsync);
             if (WindowManagerService is INotifyPropertyChanged notifyPropertyChanged1)
             {
                 Lifetime.AddBracket(

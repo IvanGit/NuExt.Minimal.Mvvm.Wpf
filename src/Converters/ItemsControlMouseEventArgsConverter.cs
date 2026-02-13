@@ -1,10 +1,9 @@
-﻿#if NETFRAMEWORK || WINDOWS
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     public class ItemsControlMouseEventArgsConverter : ValueConverterBase<MouseEventArgs, object?, Control>
     {
@@ -18,4 +17,3 @@ namespace Minimal.Mvvm.Windows
         }
     }
 }
-#endif

@@ -1,5 +1,5 @@
 ﻿using Minimal.Mvvm;
-using Minimal.Mvvm.Windows;
+using Minimal.Mvvm.Wpf;
 using System.IO;
 using System.Text;
 using System.Text.Json;

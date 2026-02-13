@@ -3,7 +3,7 @@
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:minimal="http://schemas.minimalmvvm.com/winfx/xaml/mvvm"
+             xmlns:minimal="http://schemas.nuext.minimal/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:MovieWpfApp"
              xmlns:viewModels="clr-namespace:MovieWpfApp.ViewModels"
@@ -17,7 +17,7 @@
 
         <DataTemplate x:Key="TreeViewItemBehaviors">
             <ContentControl>
-                <minimal:EventTrigger EventName="MouseDoubleClick" Command="{Binding Source={StaticResource MoviesProxy}, Path=DataContext.OpenMovieCommand}" EventArgsConverter="{StaticResource ItemsControlMouseEventArgsConverter}"/>
+                <minimal:EventToCommand EventName="MouseDoubleClick" Command="{Binding Source={StaticResource MoviesProxy}, Path=DataContext.OpenMovieCommand}" EventArgsConverter="{StaticResource ItemsControlMouseEventArgsConverter}"/>
             </ContentControl>
         </DataTemplate>
 
@@ -35,8 +35,8 @@
 
     </UserControl.Resources>
     <minimal:Interaction.Behaviors>
-        <minimal:EventTrigger EventName="Loaded" Command="{Binding LoadedCommand}" />
-        <minimal:EventTrigger EventName="Unloaded" Command="{Binding UnloadedCommand}" />
+        <minimal:EventToCommand EventName="Loaded" Command="{Binding LoadedCommand}" />
+        <minimal:EventToCommand EventName="Unloaded" Command="{Binding UnloadedCommand}" />
         <minimal:SettingsService DirectoryName="{Binding EnvironmentService.SettingsDirectory}"/>
     </minimal:Interaction.Behaviors>
     <DockPanel Margin="2">
@@ -119,7 +119,7 @@
                     <minimal:TreeViewSelectedItemBehavior SelectedItem="{Binding SelectedItem}" />
                     <minimal:ScrollBarVisibilityBehavior />
                     <minimal:TreeViewDragDropBehavior MoveCommand="{Binding MoveCommand}" />
-                    <!--<minimal:EventTrigger PassEventArgsToCommand="True" Command="{Binding MouseDoubleClickCommand}" CommandParameter="{Binding Path=SelectedItem, RelativeSource={RelativeSource FindAncestor, AncestorType=TreeView, AncestorLevel=1}}" EventName="MouseDoubleClick" />-->
+                    <!--<minimal:EventToCommand PassEventArgsToCommand="True" Command="{Binding MouseDoubleClickCommand}" CommandParameter="{Binding Path=SelectedItem, RelativeSource={RelativeSource FindAncestor, AncestorType=TreeView, AncestorLevel=1}}" EventName="MouseDoubleClick" />-->
                 </minimal:Interaction.Behaviors>
             </TreeView>
         </DockPanel>

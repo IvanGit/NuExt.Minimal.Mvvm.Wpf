@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides extension methods for the <see cref="IAsyncDocumentManagerService"/>.
@@ -14,7 +14,7 @@ namespace Minimal.Mvvm.Windows
         /// </summary>
         /// <param name="service">The document manager service to search in.</param>
         /// <param name="id">The ID of the document to find.</param>
-        /// <returns>The found asynchronous document, or <c>null</c> if no document with the specified ID is found.</returns>
+        /// <returns>The found asynchronous document, or <see langword="null"/> if no document with the specified ID is found.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="service"/> is null.</exception>
         public static IAsyncDocument? FindDocumentById(this IAsyncDocumentManagerService service, object id)
         {

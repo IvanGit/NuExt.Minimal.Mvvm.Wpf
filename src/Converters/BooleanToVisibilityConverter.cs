@@ -1,8 +1,7 @@
-﻿#if NETFRAMEWORK || WINDOWS
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Converts a boolean value to a <see cref="Visibility"/> enumeration value and vice versa.
@@ -47,4 +46,3 @@ namespace Minimal.Mvvm.Windows
         }
     }
 }
-#endif

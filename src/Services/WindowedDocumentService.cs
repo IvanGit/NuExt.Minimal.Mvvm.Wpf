@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Presentation.Wpf;
+using Presentation.Wpf.Controls;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -10,196 +12,266 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Threading;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
-    /// The WindowedDocumentService class is responsible for managing windowed documents within a UI. 
-    /// It extends the DocumentServiceBase and implements interfaces for asynchronous document management and disposal. 
-    /// This service allows for the creation, binding, and lifecycle management of windowed documents within the associated control.
+    /// A service for managing windowed documents within a UI. Extends DocumentServiceBase for asynchronous document lifecycle management.
+    /// This service handles creation, binding, and disposal of windowed documents associated with a control.
     /// </summary>
-    public sealed class WindowedDocumentService : DocumentServiceBase, IAsyncDocumentManagerService, IAsyncDisposable
+    public class WindowedDocumentService : DocumentServiceBase, IAsyncDocumentManagerService, IAsyncDisposable
     {
         #region WindowedDocument
 
         private class WindowedDocument : AsyncDisposable, IAsyncDocument
         {
-            private readonly AsyncLifetime _lifetime = new(continueOnCapturedContext: true);
-            private volatile bool _isClosing;
+            private readonly AsyncLifetime _lifetime = new AsyncLifetime() { ContinueOnCapturedContext = true }
+#if DEBUG
+                .SetDebugInfo()
+#endif
+                ;
+            private readonly CancellationTokenSource _cts = new();
+            private bool _isClosing;
+            private bool? _isClosed;
+            private bool? _isViewModelDisposing;
+            private bool? _isViewModelDisposed;
+            private readonly Action _onTitleChanged;
 
-            public WindowedDocument(WindowedDocumentService owner, Window window)
-                 : base(continueOnCapturedContext: true)
+            public WindowedDocument(WindowedDocumentService owner, Window window, AsyncLifetime lifetime)
             {
                 Owner = owner ?? throw new ArgumentNullException(nameof(owner));
                 Window = window ?? throw new ArgumentNullException(nameof(window));
 
-                _lifetime.AddDisposable(CancellationTokenSource);
-                _lifetime.AddBracket(() => owner._documents.Add(this), () => owner._documents.Remove(this));
-                _lifetime.Add(() => Window.ClearStyle());
-                _lifetime.Add(() => BindingOperations.ClearBinding(Window, FrameworkElement.DataContextProperty));
-                _lifetime.Add(DetachContent);
-                _lifetime.AddAsync(DisposeViewModelAsync);
+                Debug.Assert(Window.CheckAccess());
+
+                var viewModel = ViewModelHelper.GetViewModelFromView(Window.Content);
+                Debug.Assert(viewModel != null);
+
+                _lifetime.AddDisposable(_cts);
+                _lifetime.AddBracket(() => owner.AddDocument(this), () => owner.RemoveDocument(this));
                 _lifetime.AddBracket(() => SetDocument(Window, this), () => SetDocument(Window, null));
-                _lifetime.AddBracket(
-                    () => Window.Activated += OnWindowActivated,
-                    () => Window.Activated -= OnWindowActivated);
-                _lifetime.AddBracket(
-                    () => Window.Closed += OnWindowClosed,
-                    () => Window.Closed -= OnWindowClosed);
-                _lifetime.AddBracket(
-                    () => Window.Closing += OnWindowClosing,
-                    () => Window.Closing -= OnWindowClosing);
-                _lifetime.AddBracket(
-                    () => Window.Deactivated += OnWindowDeactivated,
-                    () => Window.Deactivated -= OnWindowDeactivated);
-                _lifetime.AddBracket(
-                    () => ViewModelHelper.SetViewTitleBinding(Window.Content, Window.TitleProperty, Window),
-                    () => BindingOperations.ClearBinding(Window, Window.TitleProperty));
+
+                _lifetime.Add(Window.Close);//close window
+                _lifetime.Add(() => Window.ClearStyle());//clear window style
+                _lifetime.Add(() => owner.ClearAllBindings(Window));//detach vm
+                _lifetime.Add(() => ViewModelHelper.DetachContentFromContainer(Window));//detach content
+                if (viewModel is INotifyPropertyChanged notifier)
+                {
+                    _lifetime.AddBracket(
+                        () => notifier.PropertyChanged += OnViewModelPropertyChanged,
+                        () => notifier.PropertyChanged -= OnViewModelPropertyChanged);
+                }
+                _lifetime.AddAsync(DisposeViewModelAsync);//dispose vm
+
+                _lifetime.AddAsyncDisposable(lifetime);
+
+                if (viewModel != null && ViewModelHelper.ViewModelHasTitleProperty(viewModel))
+                {
+                    _lifetime.AddBracket(
+                        () => ViewModelHelper.SetViewTitleBinding(Window.Content, Window.TitleProperty, Window),
+                        () => BindingOperations.ClearBinding(Window, Window.TitleProperty));
+                }
 
                 var dpd = DependencyPropertyDescriptor.FromProperty(Window.TitleProperty, typeof(Window));
                 if (dpd != null)
                 {
+                    //lock to avoid ThrowInvalidOperationException_ConcurrentOperationsNotSupported
                     _lifetime.AddBracket(
-                        () => dpd.AddValueChanged(Window, OnWindowTitleChanged),
-                        () => dpd.RemoveValueChanged(Window, OnWindowTitleChanged));
+                        () => { lock (LockPool.Get(dpd)) dpd.AddValueChanged(Window, OnWindowTitleChanged); },
+                        () => { lock (LockPool.Get(dpd)) dpd.RemoveValueChanged(Window, OnWindowTitleChanged); });
                 }
                 Debug.Assert(dpd != null);
-                Debug.Assert(Window.DataContext == ViewModelHelper.GetViewModelFromView(Window.Content));
+
+                Title = Window.Title;
+                _onTitleChanged = OnTitleChanged;
             }
 
             #region Properties
 
-            private CancellationTokenSource CancellationTokenSource { get; } = new();
+            private CancellationToken CancellationToken => _cts.Token;
 
+            /// <summary>
+            /// Gets or sets a value indicating whether the view model should be disposed when the document closes.
+            /// </summary>
             public bool DisposeOnClose { get; set; }
 
+            /// <summary>
+            /// Gets or sets a value indicating whether the window should be hidden instead of closed.
+            /// </summary>
             public bool HideInsteadOfClose { get; set; }
 
+            /// <summary>
+            /// Gets or sets the identifier for this document.
+            /// </summary>
             public object Id { get; set; } = null!;
 
+            /// <summary>
+            /// Gets or sets the document title.
+            /// </summary>
             public string? Title
             {
-                get => Window.Title;
-                set => Window.Title = value;
+                get;
+                set => SetProperty(ref field, value, _onTitleChanged, EventArgsCache.TitlePropertyChanged);
             }
 
             private Window Window { get; }
 
             private WindowedDocumentService Owner { get; }
 
+            private bool IsViewModeDisposingOrDisposed => _isViewModelDisposing == true || _isViewModelDisposed == true;
+
             #endregion
 
             #region Event Handlers
 
-            private void OnWindowActivated(object? sender, EventArgs e)
+            private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
             {
-                Debug.Assert(GetDocument((Window)sender!) == this);
-                Owner.ActiveDocument = this;
+                Debug.Assert(sender is IDisposableState);
+                if (sender is not IDisposableState viewModl)
+                {
+                    return;
+                }
+
+                switch (e.PropertyName)
+                {
+                    case nameof(IDisposableState.IsDisposing):
+                        _isViewModelDisposing = viewModl.IsDisposing;
+                        break;
+                    case nameof(IDisposableState.IsDisposed):
+                        _isViewModelDisposed = viewModl.IsDisposed;
+                        break;
+                }
             }
 
-            private void OnWindowClosed(object? sender, EventArgs e)
+            internal void OnWindowClosing(CancelEventArgs e)
             {
-                Debug.Assert(GetDocument((Window)sender!) == this);
-                Debug.Assert(Owner.ActiveDocument != this);
-            }
-
-            private void OnWindowClosing(object? sender, CancelEventArgs e)
-            {
-                Debug.Assert(sender == Window);
-                Debug.Assert(GetDocument((Window)sender!) == this);
-
-                if (e.Cancel || _isClosing)
+                if (e.Cancel || _isClosing || CancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                Debug.Assert(!IsDisposingOrDisposed);
+                if (IsDisposingOrDisposed)
+                {
+                    return;
+                }
+                if (IsViewModeDisposingOrDisposed)
                 {
                     return;
                 }
 
                 e.Cancel = true;
-                Window.Dispatcher.InvokeAsync(async () => await CloseWindowAsync(this, CancellationTokenSource.Token));
+                _ = Window.Dispatcher.InvokeAsync(async () => await CloseWindowAsync(this, CancellationToken));
             }
 
             private static async ValueTask CloseWindowAsync(WindowedDocument document, CancellationToken cancellationToken)
             {
-                try
-                {
-                    var viewModel = ViewModelHelper.GetViewModelFromView(document.Window.Content);
-                    Debug.Assert(viewModel is IAsyncDocumentContent);
-                    if (viewModel is IAsyncDocumentContent documentContent && await documentContent.CanCloseAsync(cancellationToken) == false)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        return;
-                    }
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    //do nothing
-                }
+                Debug.Assert(!document._isClosing);
+
+                var viewModel = ViewModelHelper.GetViewModelFromView(document.Window.Content);
+                Debug.Assert(viewModel != null);
 
                 if (document.HideInsteadOfClose)
                 {
+                    if (await CanCloseAsync(document.Window, cancellationToken) == false)
+                    {
+                        return;
+                    }
                     document.Hide();
                     return;
                 }
 
-                await document.CloseAsync(force: true).ConfigureAwait(false);
+                await document.CloseAsync(false).ConfigureAwait(false);
             }
 
-            private void OnWindowDeactivated(object? sender, EventArgs e)
+            internal void OnWindowClosed()
             {
-                Debug.Assert(GetDocument((Window)sender!) == this);
-                if (Owner.ActiveDocument == this)
-                {
-                    Owner.ActiveDocument = null;
-                }
+#if DEBUG
+                var activeDocument = Owner.GetPropertySafe(() => Owner.ActiveDocument);
+                Debug.Assert(activeDocument != this);
+#endif
+                _isClosed = true;
             }
 
             private void OnWindowTitleChanged(object? sender, EventArgs e)
             {
-                OnPropertyChanged(EventArgsCache.TitlePropertyChanged);
+                Debug.Assert(Window == sender);
+                Debug.Assert(Window.CheckAccess());
+                Title = Window.Title;
+            }
+
+            private void OnTitleChanged()
+            {
+                if (Window.CheckAccess())
+                {
+                    Window.Title = Title ?? "Untitled";
+                }
+                else
+                {
+                    Window.Dispatcher.Invoke(new Action(() => Window.Title = Title));
+                }
             }
 
             #endregion
 
             #region Methods
 
-            public async ValueTask CloseAsync(bool force = true)
+            /// <inheritdoc/>
+            public ValueTask CloseAsync(bool force)
             {
-                if (_lifetime.IsTerminated || IsDisposing)
+                if (IsDisposingOrDisposed)
+                {
+                    return ValueTask.CompletedTask;
+                }
+
+                var dispatcher = Window.Dispatcher;
+                if (dispatcher.CheckAccess())
+                {
+                    return CloseAsyncCore(force);
+                }
+                return new ValueTask(dispatcher.InvokeAsync(async () => await CloseAsyncCore(force).ConfigureAwait(false)).Task.Unwrap());
+            }
+
+            private async ValueTask CloseAsyncCore(bool force)
+            {
+                Debug.Assert(Window.CheckAccess());
+                Debug.Assert(IsDisposingOrDisposed == false);
+
+                VerifyAccess();
+                CheckDisposingOrDisposed();
+
+                if (_isClosing)
                 {
                     return;
                 }
                 if (force)
                 {
 #if NET8_0_OR_GREATER
-                    await CancellationTokenSource.CancelAsync();
+                    await _cts.CancelAsync();
 #else
-                    CancellationTokenSource.Cancel();
+                    _cts.Cancel();
 #endif
-                }
-                if (_isClosing)
-                {
-                    return;
                 }
                 _isClosing = true;
                 try
                 {
                     if (!force)
                     {
-                        try
+                        if (await CanCloseAsync(Window, CancellationToken) == false)
                         {
-                            var viewModel = ViewModelHelper.GetViewModelFromView(Window.Content);
-                            if (viewModel is IAsyncDocumentContent documentContent && await documentContent.CanCloseAsync(CancellationTokenSource.Token) == false)
-                            {
-                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                                return;
-                            }
-                        }
-                        catch (OperationCanceledException) when (CancellationTokenSource.IsCancellationRequested)
-                        {
-                            //do nothing
+                            return;
                         }
                     }
-                    CloseWindow();
                     await DisposeAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"Exception occurred while closing document '{Title}': {ex.Message}");
+                    Debug.Fail($"Exception occurred while closing document '{Title}'.", ex.Message);
+                    if (force)
+                    {
+                        throw;
+                    }
                 }
                 finally
                 {
@@ -207,49 +279,87 @@ namespace Minimal.Mvvm.Windows
                 }
             }
 
-            private void CloseWindow()
+            protected override async ValueTask DisposeAsyncCore()
             {
-                Window.Hide();
-                Window.Close();
+                Debug.Assert(ContinueOnCapturedContext);
+                Debug.Assert(CheckAccess());
+                VerifyAccess();
+#if NET8_0_OR_GREATER
+                await _cts.CancelAsync();
+#else
+                _cts.Cancel();
+#endif
+                Hide();
+                await _lifetime.DisposeAsync().ConfigureAwait(false);
             }
 
-            private void DetachContent()
+            private ValueTask DisposeViewModelAsync()
             {
-                var view = Window.Content;
-                Debug.Assert(view != null);
-                //First, detach DataContext from view
-                ViewModelHelper.DetachViewModel(view);
-                //Second, detach Content from window
-                Window.Content = null;
-                Debug.Assert(Window.DataContext == null);
-            }
-
-            private async ValueTask DisposeViewModelAsync()
-            {
+                if (IsViewModeDisposingOrDisposed)
+                {
+                    Debug.Assert(_isViewModelDisposed == true);
+                    return ValueTask.CompletedTask;
+                }
                 var viewModel = ViewModelHelper.GetViewModelFromView(Window.Content);
                 Debug.Assert(viewModel != null);
                 if (DisposeOnClose && viewModel is IAsyncDisposable asyncDisposable)
                 {
-                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                    return asyncDisposable.DisposeAsync();
+                }
+                return ValueTask.CompletedTask;
+            }
+
+            /// <summary>
+            /// Hides the document window.
+            /// </summary>
+            public void Hide()
+            {
+                CheckDisposed();
+
+                if (_isClosed == true)
+                {
+                    return;
+                }
+
+                if (Window.CheckAccess())
+                {
+                    Window.Hide();
+                }
+                else
+                {
+                    Window.Dispatcher.Invoke(Hide);
                 }
             }
 
-            public void Hide()
-            {
-                Window.Hide();
-            }
-
-            protected override ValueTask DisposeAsyncCore()
-            {
-                Debug.Assert(ContinueOnCapturedContext);
-                return _lifetime.DisposeAsync();
-            }
-
+            /// <summary>
+            /// Shows the document window.
+            /// </summary>
             public void Show()
             {
-                Window.BringToFront();
-                //Window.Show();
-                //Window.Activate();
+                CheckDisposed();
+
+                if (_isClosed == true)
+                {
+                    return;
+                }
+
+                if (Window.CheckAccess())
+                {
+                    Window.BringToFront();
+                }
+                else
+                {
+                    Window.Dispatcher.Invoke(Show);
+                }
+            }
+
+            /// <summary>
+            /// Returns a string representation of the document.
+            /// </summary>
+            /// <returns>The document title or "Untitled".</returns>
+            public override string ToString()
+            {
+                return Title ?? "Untitled";
             }
 
             #endregion
@@ -258,78 +368,79 @@ namespace Minimal.Mvvm.Windows
         #endregion
 
         private readonly ObservableCollection<IAsyncDocument> _documents = [];
-
-        #region Dependency Properties
-
-        public static readonly DependencyProperty SetWindowOwnerProperty = DependencyProperty.Register(
-            nameof(SetWindowOwner), typeof(bool), typeof(WindowedDocumentService));
-
-        public static readonly DependencyProperty WindowStartupLocationProperty = DependencyProperty.Register(
-            nameof(WindowStartupLocation), typeof(WindowStartupLocation), typeof(WindowedDocumentService), new PropertyMetadata(WindowStartupLocation.CenterScreen));
-
-        public static readonly DependencyProperty WindowStyleProperty = DependencyProperty.Register(
-            nameof(WindowStyle), typeof(Style), typeof(WindowedDocumentService));
-
-        public static readonly DependencyProperty WindowStyleSelectorProperty = DependencyProperty.Register(
-            nameof(WindowStyleSelector), typeof(StyleSelector), typeof(WindowedDocumentService));
-
-        public static readonly DependencyProperty WindowTypeProperty = DependencyProperty.Register(
-            nameof(WindowType), typeof(Type), typeof(WindowedDocumentService));
-
-        #endregion
+        private bool _isActiveDocumentChanging;
 
         public WindowedDocumentService()
         {
-            if (ControlViewModel.IsInDesignMode) return;
+            if (ViewModelHelper.IsInDesignMode) return;
             (_documents as INotifyPropertyChanged).PropertyChanged += OnDocumentsPropertyChanged;
         }
 
         #region Properties
 
+        /// <inheritdoc/>
         public int Count => _documents.Count;
 
+        /// <inheritdoc/>
         public IEnumerable<IAsyncDocument> Documents => _documents;
 
+        /// <summary>
+        /// Gets or sets a value indicating whether newly created windows should have an owner window set.
+        /// </summary>
         public bool SetWindowOwner
         {
-            get => (bool)GetValue(SetWindowOwnerProperty);
-            set => SetValue(SetWindowOwnerProperty, value);
+            get => WindowHelper.GetSetWindowOwner(this);
+            set => WindowHelper.SetSetWindowOwner(this, value);
         }
 
+        /// <summary>
+        /// Gets or sets the startup location for newly created windows.
+        /// </summary>
         public WindowStartupLocation WindowStartupLocation
         {
-            get => (WindowStartupLocation)GetValue(WindowStartupLocationProperty);
-            set => SetValue(WindowStartupLocationProperty, value);
+            get => WindowHelper.GetWindowStartupLocation(this);
+            set => WindowHelper.SetWindowStartupLocation(this, value);
         }
 
+        /// <summary>
+        /// Gets or sets the style to apply to newly created windows.
+        /// </summary>
         public Style? WindowStyle
         {
-            get => (Style)GetValue(WindowStyleProperty);
-            set => SetValue(WindowStyleProperty, value);
+            get => WindowHelper.GetWindowStyle(this);
+            set => WindowHelper.SetWindowStyle(this, value);
         }
 
+        /// <summary>
+        /// Gets or sets the resource key for the window style to look up in resources.
+        /// </summary>
+        public string? WindowStyleKey
+        {
+            get => WindowHelper.GetWindowStyleKey(this);
+            set => WindowHelper.SetWindowStyleKey(this, value);
+        }
+
+        /// <summary>
+        /// Gets or sets the style selector to choose a window style for newly created windows.
+        /// </summary>
         public StyleSelector? WindowStyleSelector
         {
-            get => (StyleSelector)GetValue(WindowStyleSelectorProperty);
-            set => SetValue(WindowStyleSelectorProperty, value);
+            get => WindowHelper.GetWindowStyleSelector(this);
+            set => WindowHelper.SetWindowStyleSelector(this, value);
         }
 
+        /// <summary>
+        /// Gets or sets the type of window to create. Uses standard Window type if not specified.
+        /// </summary>
         public Type? WindowType
         {
-            get => (Type)GetValue(WindowTypeProperty);
-            set => SetValue(WindowTypeProperty, value);
+            get => WindowHelper.GetWindowType(this);
+            set => WindowHelper.SetWindowType(this, value);
         }
 
         #endregion
 
         #region Event Handlers
-
-        protected override void OnActiveDocumentChanged(IAsyncDocument? oldValue, IAsyncDocument? newValue)
-        {
-            Debug.Assert(oldValue != newValue);
-            newValue?.Show();
-            base.OnActiveDocumentChanged(oldValue, newValue);
-        }
 
         private void OnDocumentsPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -339,48 +450,222 @@ namespace Minimal.Mvvm.Windows
             }
         }
 
+        protected override void OnActiveDocumentChanged(IAsyncDocument? oldValue, IAsyncDocument? newValue)
+        {
+            Debug.Assert(oldValue != newValue);
+
+            VerifyAccess();
+            if (!_isActiveDocumentChanging)
+            {
+                _isActiveDocumentChanging = true;
+                try
+                {
+                    newValue?.Show();
+                }
+                finally
+                {
+                    _isActiveDocumentChanging = false;
+                }
+            }
+            base.OnActiveDocumentChanged(oldValue, newValue);
+        }
+
+        private void OnWindowActivated(object? sender, EventArgs e)
+        {
+            Debug.Assert(((Window)sender!).CheckAccess());
+            var document = GetDocument((Window)sender!);
+
+            if (CheckAccess())
+            {
+                OnWindowActivated(document);
+            }
+            else
+            {
+                Dispatcher.InvokeAsync(() => OnWindowActivated(document), DispatcherPriority.Send);
+            }
+
+            void OnWindowActivated(IAsyncDocument? document)
+            {
+                VerifyAccess();
+
+                if (_isActiveDocumentChanging)
+                {
+                    return;
+                }
+                _isActiveDocumentChanging = true;
+                try
+                {
+                    ActiveDocument = document;
+                }
+                finally
+                {
+                    _isActiveDocumentChanging = false;
+                }
+            }
+        }
+
+        private void OnWindowDeactivated(object? sender, EventArgs e)
+        {
+            Debug.Assert(((Window)sender!).CheckAccess());
+            var document = GetDocument((Window)sender!);
+
+            if (CheckAccess())
+            {
+                OnWindowDeactivated(document);
+            }
+            else
+            {
+                Dispatcher.InvokeAsync(() => OnWindowDeactivated(document), DispatcherPriority.Send);
+            }
+
+            void OnWindowDeactivated(IAsyncDocument? document)
+            {
+                VerifyAccess();
+
+                if (_isActiveDocumentChanging)
+                {
+                    return;
+                }
+                if (ActiveDocument == document)
+                {
+                    _isActiveDocumentChanging = true;
+                    try
+                    {
+                        ActiveDocument = null;
+                    }
+                    finally
+                    {
+                        _isActiveDocumentChanging = false;
+                    }
+                }
+            }
+        }
+
+        private static void OnWindowClosing(object? sender, CancelEventArgs e)
+        {
+            var document = GetDocument((Window)sender!) as WindowedDocument;
+            Debug.Assert(document != null);
+            document?.OnWindowClosing(e);
+        }
+
+        private static void OnWindowClosed(object? sender, EventArgs e)
+        {
+            var document = GetDocument((Window)sender!) as WindowedDocument;
+            Debug.Assert(document != null);
+            document?.OnWindowClosed();
+        }
+
+#if DEBUG
+        private static  void OnWindowSourceInitialized(object? sender, EventArgs e)
+        {
+            Debug.Assert(((Window)sender!).DataContext == ViewModelHelper.GetViewModelFromView(((Window)sender!).Content));
+        }
+#endif
+
         #endregion
 
         #region Methods
 
+        private void AddDocument(IAsyncDocument document)
+        {
+            if (!CheckAccess())
+            {
+                Dispatcher.Invoke(() => _documents.Add(document), DispatcherPriority.Send);
+                return;
+            }
+            _documents.Add(document);
+        }
+
+        private void RemoveDocument(IAsyncDocument document)
+        {
+            if (!CheckAccess())
+            {
+                Dispatcher.Invoke(() => _documents.Remove(document), DispatcherPriority.Send);
+                return;
+            }
+            _documents.Remove(document);
+        }
+
+        private static async ValueTask<bool> CanCloseAsync(Window window, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var viewModel = ViewModelHelper.GetViewModelFromView(window.Content);
+                Debug.Assert(viewModel != null);
+                switch (viewModel)
+                {
+                    case IAsyncDocumentContent { } documentContent when await documentContent.CanCloseAsync(cancellationToken) == false:
+                    case IWindowViewModel { } windowViewModel when await windowViewModel.CanCloseAsync(cancellationToken) == false:
+                        cancellationToken.ThrowIfCancellationRequested();
+                        return false;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                //do nothing and return
+                return false;
+            }
+            return true;
+        }
+
+        /// <inheritdoc/>
         public async ValueTask<IAsyncDocument> CreateDocumentAsync(string? documentType, object? viewModel,
             object? parentViewModel, object? parameter, CancellationToken cancellationToken = default)
         {
-            Throw.IfNull(AssociatedObject);
             cancellationToken.ThrowIfCancellationRequested();
 
             var view = await CreateViewAsync(documentType, cancellationToken);
 
-            var window = CreateWindow(view, viewModel);
+            var lifetime = new AsyncLifetime() { ContinueOnCapturedContext = true }
+#if DEBUG
+                    .SetDebugInfo()
+#endif
+                ;
+
+            var window = WindowHelper.CreateWindow(this, view, viewModel, SubscribeWindow);
             ViewModelHelper.SetDataContextBinding(view, FrameworkElement.DataContextProperty, window);
+            try
+            {
+                await ViewModelHelper.InitializeViewAsync(view, viewModel, parentViewModel, parameter, cancellationToken);
+            }
+            catch
+            {
+                await lifetime.DisposeAsync();
+                throw;
+            }
 
-            await ViewModelHelper.InitializeViewAsync(view, viewModel, parentViewModel, parameter, cancellationToken);
-
-            var document = new WindowedDocument(this, window);
+            var document = new WindowedDocument(this, window, lifetime) { ContinueOnCapturedContext = true };
             return document;
+
+            void SubscribeWindow(Window window)
+            {
+                lifetime.AddBracket(
+                    () => window.Activated += OnWindowActivated,
+                    () => window.Activated -= OnWindowActivated);
+                lifetime.AddBracket(
+                    () => window.Deactivated += OnWindowDeactivated,
+                    () => window.Deactivated -= OnWindowDeactivated);
+                lifetime.AddBracket(
+                    () => window.Closing += OnWindowClosing,
+                    () => window.Closing -= OnWindowClosing);
+                lifetime.AddBracket(
+                    () => window.Closed += OnWindowClosed,
+                    () => window.Closed -= OnWindowClosed);
+#if DEBUG
+                lifetime.AddBracket(
+                    () => window.SourceInitialized += OnWindowSourceInitialized,
+                    () => window.SourceInitialized -= OnWindowSourceInitialized);
+#endif
+            }
         }
 
-        private Window CreateWindow(object? view, object? viewModel)
+        protected virtual void ClearAllBindings(Window window)
         {
-            var window = WindowType != null ? (Window)Activator.CreateInstance(WindowType)! : new Window();
-            window.Title = "Untitled";
-            window.Content = view;
-            var windowStyle = GetWindowStyle(window, viewModel);
-            if (windowStyle != null)
-            {
-                window.Style = windowStyle;
-            }
-
-            if (SetWindowOwner)
-            {
-                window.Owner = AssociatedObject as Window ?? Window.GetWindow(AssociatedObject);
-            }
-            window.WindowStartupLocation = WindowStartupLocation;
-
-            return window;
+            BindingOperations.ClearBinding(window, FrameworkElement.DataContextProperty);
         }
 
-        public async ValueTask DisposeAsync()
+        /// <inheritdoc/>
+        public async ValueTask CloseAllAsync()
         {
             try
             {
@@ -388,7 +673,7 @@ namespace Minimal.Mvvm.Windows
                 {
                     return;
                 }
-                await Task.WhenAll(_documents.ToList().Select(x => x.CloseAsync().AsTask())).ConfigureAwait(false);
+                await Task.WhenAll(_documents.ToList().Select(async x => await x.CloseAsync().ConfigureAwait(false))).ConfigureAwait(false);
                 if (_documents.Count == 0)
                 {
                     return;
@@ -424,18 +709,11 @@ namespace Minimal.Mvvm.Windows
             }
         }
 
-        private Style? GetWindowStyle(Window window, object? viewModel)
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
         {
-            // WindowStyle has first stab
-            var style = WindowStyle;
-
-            // no WindowStyle set, try WindowStyleSelector
-            if (style == null && WindowStyleSelector != null)
-            {
-                style = WindowStyleSelector.SelectStyle(viewModel, window);
-            }
-
-            return style;
+            await CloseAllAsync().ConfigureAwait(false);
+            GC.SuppressFinalize(this);
         }
 
         #endregion

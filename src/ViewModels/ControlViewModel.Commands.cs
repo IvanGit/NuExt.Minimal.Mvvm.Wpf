@@ -1,4 +1,4 @@
-﻿#define TRACE_EVENTS
+﻿#define TRACE_EVENTS_
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using static AccessModifier;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     partial class ControlViewModel
     {
@@ -20,7 +20,7 @@ namespace Minimal.Mvvm.Windows
         /// <remarks>
         /// This command should be bound to the control in the view to handle the Loaded event. For example:
         /// <code>
-        /// &lt;minimal:EventTrigger EventName="Loaded" Command="{Binding LoadedCommand}" /&gt;
+        /// &lt;minimal:EventToCommand EventName="Loaded" Command="{Binding LoadedCommand}" /&gt;
         /// </code>
         /// </remarks>
         [Notify(Setter = Private)]
@@ -32,7 +32,7 @@ namespace Minimal.Mvvm.Windows
         /// <remarks>
         /// This command should be bound to the control in the view to handle the Unloaded event. For example:
         /// <code>
-        /// &lt;minimal:EventTrigger EventName="Unloaded" Command="{Binding UnloadedCommand}" /&gt;
+        /// &lt;minimal:EventToCommand EventName="Unloaded" Command="{Binding UnloadedCommand}" /&gt;
         /// </code>
         /// </remarks>
         [Notify(Setter = Private)]
@@ -48,13 +48,13 @@ namespace Minimal.Mvvm.Windows
         /// <remarks>
         /// The LoadedCommand should be bound to the control in the view to handle the Loaded event. For example:
         /// <code>
-        /// &lt;minimal:EventTrigger EventName="Loaded" Command="{Binding LoadedCommand}" /&gt;
+        /// &lt;minimal:EventToCommand EventName="Loaded" Command="{Binding LoadedCommand}" /&gt;
         /// </code>
         /// </remarks>
         protected virtual void OnLoaded()
         {
 #if TRACE_EVENTS
-            Trace.WriteLine($"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({GetHashCode()})::OnLoaded");
+            Trace.WriteLine($"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8})::OnLoaded");
 #endif
         }
 
@@ -64,13 +64,13 @@ namespace Minimal.Mvvm.Windows
         /// <remarks>
         /// The UnloadedCommand should be bound to the control in the view to handle the Unloaded event. For example:
         /// <code>
-        /// &lt;minimal:EventTrigger EventName="Unloaded" Command="{Binding UnloadedCommand}" /&gt;
+        /// &lt;minimal:EventToCommand EventName="Unloaded" Command="{Binding UnloadedCommand}" /&gt;
         /// </code>
         /// </remarks>
         protected virtual void OnUnloaded()
         {
 #if TRACE_EVENTS
-            Trace.WriteLine($"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({GetHashCode()})::OnUnloaded");
+            Trace.WriteLine($"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8})::OnUnloaded");
 #endif
         }
 
@@ -198,31 +198,6 @@ namespace Minimal.Mvvm.Windows
             commandBuilder.Dispose();
 
             return asyncCommandBuilder.ToArray();
-        }
-
-        /// <summary>
-        /// Gets the cancellation token for the currently executing asynchronous command associated with the calling method's name.
-        /// </summary>
-        /// <param name="callerName">The name of the calling method. This parameter is automatically provided by the compiler.</param>
-        /// <returns>The <see cref="CancellationToken"/> for the ongoing asynchronous command, if any; otherwise, a default <see cref="CancellationToken"/>.</returns>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="callerName"/> is null or empty, or command not found.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when the command associated with the calling method is not asynchronous, is not executing, or does not have a valid cancellation token.</exception>
-        /// <remarks>
-        /// This method uses the <see cref="CallerMemberNameAttribute"/> to determine the name of the calling method automatically,
-        /// making it easier to retrieve the appropriate cancellation token without explicitly passing the method name.
-        /// This method is intended to be called from within an asynchronous command method to obtain the associated cancellation token.
-        /// </remarks>
-        protected CancellationToken GetCurrentCancellationToken([CallerMemberName] string? callerName = null)
-        {
-            var command = GetCurrentCommand(callerName);
-            Debug.Assert(command is IRelayCommand { IsExecuting: true});
-            IAsyncCommand? asyncCommand = command as IAsyncCommand;
-            if (asyncCommand is null || !asyncCommand.IsExecuting)
-            {
-                Throw.InvalidOperationException($"No running asynchronous command found for the calling method '{callerName}'");
-            }
-            Throw.InvalidOperationExceptionIf(asyncCommand.CancellationTokenSource is null, "The asynchronous command does not have a valid cancellation token.");
-            return asyncCommand.CancellationTokenSource.Token;
         }
 
         /// <summary>

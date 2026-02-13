@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// A class that locates and initializes views based on view models, inheriting from <see cref="ViewLocatorBase"/>.
@@ -96,13 +96,13 @@ namespace Minimal.Mvvm.Windows
             foreach (var type in GetTypes())
             {
                 Debug.Assert(type != null);
-                if (type!.Name == viewName)
+                if (string.Equals(type!.Name, viewName, StringComparison.Ordinal))
                 {
                     return (_nameCache[type.Name] = type);
                 }
-                if (type.FullName == viewName)
+                if (string.Equals(type.FullName, viewName, StringComparison.Ordinal))
                 {
-                    return (_fullNameCache[type.FullName] = type);
+                    return (_fullNameCache[type.FullName!] = type);
                 }
             }
             return null;
@@ -162,7 +162,7 @@ namespace Minimal.Mvvm.Windows
                 }
                 builder.Append(type);
             }
-            Debug.Assert(builder.Length < 128, $"builder.Length: {builder.Length}. Encrease capacity.");
+            Debug.Assert(builder.Length < 128, $"builder.Length: {builder.Length}. Increase capacity.");
             return builder.ToArray();
         }
 

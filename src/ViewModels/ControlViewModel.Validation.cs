@@ -1,7 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     partial class ControlViewModel
     {
@@ -10,14 +11,13 @@ namespace Minimal.Mvvm.Windows
         {
             var typeName = GetType().FullName;
             var displayName = DisplayName ?? "Unnamed";
-            var hashCode = GetHashCode();
 
             Debug.Assert(CheckAccess());
 
             var asyncCommands = GetAllAsyncCommands();
             Debug.Assert(asyncCommands.Count == 0 ||
-                         asyncCommands.All(pair => pair.Command.IsExecuting == false || pair.Command.IsCancellationRequested),
-                $"{typeName} ({displayName}) ({hashCode}) has unexpected state of async commands.");
+                         asyncCommands.All(pair => pair.Command.IsExecuting == false),
+                $"{typeName} ({displayName}) ({RuntimeHelpers.GetHashCode(this):X8}) has unexpected state of async commands.");
         }
 
         [Conditional("DEBUG")]
@@ -25,10 +25,9 @@ namespace Minimal.Mvvm.Windows
         {
             var typeName = GetType().FullName;
             var displayName = DisplayName ?? "Unnamed";
-            var hashCode = GetHashCode();
 
             var commands = GetAllCommands();
-            Debug.Assert(commands.All(c => c.Command is null), $"{typeName} ({displayName}) ({hashCode}) has not nullified commands.");
+            Debug.Assert(commands.All(c => c.Command is null), $"{typeName} ({displayName}) ({RuntimeHelpers.GetHashCode(this):X8}) has not nullified commands.");
         }
     }
 }

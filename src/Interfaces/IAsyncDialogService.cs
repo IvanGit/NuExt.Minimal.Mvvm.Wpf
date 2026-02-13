@@ -3,12 +3,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents an asynchronous dialog service that can show dialogs with specified commands and parameters.
     /// </summary>
-    public interface IAsyncDialogService
+    public interface IAsyncDialogService : INamedService
     {
         /// <summary>
         /// Shows a dialog with the specified commands, title, document type, view model, and additional parameters.

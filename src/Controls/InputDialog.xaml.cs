@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Presentation.Wpf;
+using System;
 using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,7 +9,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace Minimal.Mvvm.Windows.Controls
+namespace Minimal.Mvvm.Wpf.Controls
 {
     /// <summary>
     /// Interaction logic for InputDialog.xaml
@@ -149,8 +150,11 @@ namespace Minimal.Mvvm.Windows.Controls
 
         private Lifetime SubscribeMetroDialog(CancellationToken cancellationToken)
         {
-            var lifetime = new Lifetime();
-
+            var lifetime = new Lifetime()
+#if DEBUG
+                    .SetDebugInfo()
+#endif
+                ;
             if (cancellationToken.CanBeCanceled)
             {
                 lifetime.AddDisposable(cancellationToken.Register(Close, useSynchronizationContext: true));

@@ -1,61 +1,55 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents a ViewModel for a window, providing properties and methods for managing the window's state,
     /// services for handling various window-related operations, and commands for interacting with the UI.
     /// </summary>
-    public partial class WindowViewModel : ControlViewModel, IWindowViewModel
+    public partial class WindowViewModel(IServiceContainer? fallbackServices) : ControlViewModel(fallbackServices), IWindowViewModel
     {
         private readonly CancellationTokenSource _cts = new();
         private bool _isClosing;
 
+        public WindowViewModel() : this(fallbackServices: null)
+        {
+        }
+
         #region Properties
 
-        /// <summary>
-        /// Gets the cancellation token for this window's lifecycle.
-        /// </summary>
+        /// <inheritdoc/>
         public CancellationToken CancellationToken => _cts.Token;
 
         /// <summary>
         /// Gets or sets the title of the window.
         /// </summary>
         [Notify]
-        private string? _title;
+        private string _title = string.Empty;
 
         #endregion
 
         #region Services
 
         /// <summary>
-        /// Gets the service responsible for managing open windows.
+        /// Gets the <see cref="IOpenWindowsService"/> responsible for managing open windows.
         /// </summary>
-        protected IOpenWindowsService? OpenWindowsService => GetService<IOpenWindowsService>();
+        private IOpenWindowsService? OpenWindowsService => field ??= GetService<IOpenWindowsService>();
 
         /// <summary>
-        /// Gets the service responsible for managing window placement.
+        /// Gets the <see cref="IWindowService"/> responsible for managing the current window.
         /// </summary>
-        protected IWindowPlacementService? WindowPlacementService => GetService<IWindowPlacementService>();
-
-        /// <summary>
-        /// Gets the service responsible for managing the current window.
-        /// </summary>
-        protected IWindowService? WindowService => GetService<IWindowService>();
+        private IWindowService? WindowService => field ??= GetService<IWindowService>();
 
         #endregion
 
         #region Methods
 
-        /// <summary>
-        /// Determines whether the window can be closed. Override this method to provide custom close logic.
-        /// </summary>
-        /// <param name="cancellationToken">A token to cancel the operation.</param>
-        /// <returns>True if the window can be closed; otherwise, false.</returns>
-        protected virtual ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken)
+        /// <inheritdoc/>
+        public virtual ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken)
         {
             return cancellationToken.IsCancellationRequested ? ValueTask.FromCanceled<bool>(cancellationToken) : ValueTask.FromResult(true);
         }
@@ -68,39 +62,48 @@ namespace Minimal.Mvvm.Windows
             Debug.Assert(CheckAccess());
             VerifyAccess();
 
-            Debug.Assert(WindowService != null, $"{nameof(WindowService)} is null");
-            WindowService?.Close();
+            GetWindowService().Close();
         }
 
-        /// <summary>
-        /// Asynchronously closes the window and disposes the ViewModel if closure is not canceled. 
-        /// A disposed ViewModel should not be reused.
-        /// </summary>
-        /// <param name="force">
-        /// <see langword="true"/> to close immediately; 
-        /// <see langword="false"/> to allow cancellation via <see cref="CanCloseAsync"/>.
-        /// </param>
-        public async ValueTask CloseAsync(bool force = true)
+        /// <inheritdoc/>
+        public ValueTask CloseAsync(bool force)
+        {
+            if (IsDisposingOrDisposed)
+            {
+                return ValueTask.CompletedTask;
+            }
+
+            if (CheckAccess())
+            {
+                return CloseAsyncCore(force);
+            }
+            return new ValueTask(InvokeAsync(async () => await CloseAsyncCore(force).ConfigureAwait(false)));
+        }
+
+        private async ValueTask CloseAsyncCore(bool force)
         {
             Debug.Assert(CheckAccess());
-            Debug.Assert(IsDisposed == false);
+            Debug.Assert(IsDisposingOrDisposed == false);
 
             VerifyAccess();
-            CheckDisposed();
+            CheckDisposingOrDisposed();
 
             if (_isClosing)
             {
                 return;
             }
-
+            if (force)
+            {
+#if NET8_0_OR_GREATER
+                await _cts.CancelAsync();
+#else
+                _cts.Cancel();
+#endif
+            }
             _isClosing = true;
             try
             {
-                if (force)
-                {
-                    WindowPlacementService?.SavePlacement();//TODO check
-                }
-                else
+                if (!force)
                 {
                     try
                     {
@@ -116,17 +119,7 @@ namespace Minimal.Mvvm.Windows
                     }
                 }
 
-#if NET8_0_OR_GREATER
-                await _cts.CancelAsync();
-#else
-                _cts.Cancel();
-#endif
-                Hide();
-                await DisposeAsync();
-
-                Debug.Assert(CheckAccess());
-                Close();
-                _cts.Dispose();
+                await DisposeAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -142,19 +135,48 @@ namespace Minimal.Mvvm.Windows
             }
         }
 
-        private void Hide()
+        /// <inheritdoc/>
+        protected override async ValueTask DisposeAsyncCore()
         {
-            Debug.Assert(WindowService != null, $"{nameof(WindowService)} is null");
-            WindowService?.Hide();
+            Debug.Assert(CheckAccess());
+            VerifyAccess();
+#if NET8_0_OR_GREATER
+            await _cts.CancelAsync();
+#else
+            _cts.Cancel();
+#endif
+            Hide();
+            await base.DisposeAsyncCore();
+            Close();
+            _cts.Dispose();
         }
 
         /// <inheritdoc/>
-        protected override Task InitializeAsyncCore(CancellationToken cancellationToken)
+        public void Hide()
         {
-            Debug.Assert(WindowService != null, $"{nameof(WindowService)} is null");
-            Debug.Assert(OpenWindowsService != null, $"{nameof(OpenWindowsService)} is null");
-            Debug.Assert(WindowPlacementService != null, $"{nameof(WindowPlacementService)} is null");
-            return base.InitializeAsyncCore(cancellationToken);
+            CheckDisposed();
+
+            Invoke(GetWindowService().Hide);
+        }
+
+        /// <inheritdoc/>
+        public void Show()
+        {
+            CheckDisposed();
+
+            Invoke(GetWindowService().Show);
+        }
+
+        /// <summary>
+        /// Gets the <see cref="IWindowService"/> responsible for managing the current window.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown when the <see cref="IWindowService"/> is not registered.</exception>
+        protected virtual IWindowService GetWindowService()
+        {
+            var windowService = WindowService;
+            Debug.Assert(windowService != null, $"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}): IWindowService is not registered.");
+            _ = windowService ?? throw new InvalidOperationException($"{GetType().FullName} ({DisplayName ?? "Unnamed"}) ({RuntimeHelpers.GetHashCode(this):X8}): IWindowService is not registered.");
+            return windowService;
         }
 
         #endregion

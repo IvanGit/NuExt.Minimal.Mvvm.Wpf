@@ -1,7 +1,6 @@
-﻿#if NETFRAMEWORK || WINDOWS
-using System.Windows;
+﻿using System.Windows;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents a base class for services that can be attached to a FrameworkElement and need access to the Window.
@@ -12,7 +11,7 @@ namespace Minimal.Mvvm.Windows
 
         private static readonly DependencyPropertyKey WindowPropertyKey = DependencyProperty.RegisterReadOnly(
             nameof(Window), typeof(Window), typeof(WindowServiceBase),
-            new PropertyMetadata(null, (d, e) => ((WindowServiceBase)d).OnWindowChanged((Window?)e.OldValue, (Window?)e.NewValue)));
+            new PropertyMetadata(defaultValue: null, (d, e) => ((WindowServiceBase)d).OnWindowChanged((Window?)e.OldValue, (Window?)e.NewValue)));
 
         /// <summary>
         /// Identifies the <see cref="Window"/> dependency property.
@@ -95,4 +94,4 @@ namespace Minimal.Mvvm.Windows
         #endregion
     }
 }
-#endif
+

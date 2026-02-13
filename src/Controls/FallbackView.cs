@@ -2,14 +2,14 @@
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace Minimal.Mvvm.Windows.Controls
+namespace Minimal.Mvvm.Wpf.Controls
 {
     public class FallbackView : Panel
     {
         public FallbackView()
         {
             var tb = new TextBlock();
-            if (ControlViewModel.IsInDesignMode)
+            if (ViewModelHelper.IsInDesignMode)
             {
                 tb.FontSize = 24;
                 tb.Foreground = Brushes.Red;

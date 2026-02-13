@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Defines an interface for asynchronous document content that can represent a view model.
@@ -11,7 +11,7 @@ namespace Minimal.Mvvm.Windows
         /// <summary>
         /// Gets the title of the document content.
         /// </summary>
-        public string? Title { get; }
+        string Title { get; }
 
         /// <summary>
         /// Determines whether the document content can be closed asynchronously.
@@ -20,6 +20,6 @@ namespace Minimal.Mvvm.Windows
         /// <returns>
         /// A task that represents the asynchronous operation. The result indicates whether the document can be closed.
         /// </returns>
-        public ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken);
+        ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken);
     }
 }

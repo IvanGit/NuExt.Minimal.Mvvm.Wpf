@@ -1,14 +1,14 @@
 ﻿using System;
 using System.IO;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Interface providing methods for managing window placement in the application.
     /// Handles saving and restoring the window's position, size, and state.
     /// It also includes events for error handling, and notifications when the window placement is saved or restored.
     /// </summary>
-    public interface IWindowPlacementService
+    public interface IWindowPlacementService : INamedService
     {
         /// <summary>
         /// Occurs when an error happens during the save or restore process.

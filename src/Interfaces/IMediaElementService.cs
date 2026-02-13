@@ -2,9 +2,9 @@
 using System.Windows;
 using System.Windows.Input;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
-    public interface IMediaElementService
+    public interface IMediaElementService : INamedService
     {
         ICommand PauseCommand { get; }
         ICommand PlayCommand { get; }

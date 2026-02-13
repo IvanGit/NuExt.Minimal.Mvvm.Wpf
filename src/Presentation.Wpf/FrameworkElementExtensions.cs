@@ -1,7 +1,9 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 
-namespace System.Windows
+namespace Presentation.Wpf
 {
     public static class FrameworkElementExtensions
     {
@@ -26,7 +28,7 @@ namespace System.Windows
         {
             ArgumentNullException.ThrowIfNull(element);
 
-            element.Dispatcher.VerifyAccess();
+            element.VerifyAccess();
 
             if (element.IsLoaded)
             {
@@ -44,10 +46,15 @@ namespace System.Windows
             try
             {
                 using (cancellationToken.CanBeCanceled
-                           ? cancellationToken.Register(() => tcs.TrySetCanceled(), useSynchronizationContext: false)
+                           ? cancellationToken
+#if NET
+                           .UnsafeRegister(static state => ((TaskCompletionSource<bool>)state!).TrySetCanceled(), tcs)
+#else
+                           .Register(static state => ((TaskCompletionSource<bool>)state!).TrySetCanceled(), tcs, useSynchronizationContext: false)
+#endif
                            : null as IDisposable)
                 {
-                    await tcs.Task.ConfigureAwait(false);
+                    await tcs.Task;
                 }
             }
             finally

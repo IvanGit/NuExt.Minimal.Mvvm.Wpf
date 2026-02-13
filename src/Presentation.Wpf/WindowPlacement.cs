@@ -1,11 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Windows;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.WindowsAndMessaging;
 
 using static Windows.Win32.PInvoke;
 
-namespace System.Windows
+namespace Presentation.Wpf
 {
     /// <summary>
     /// The `WindowPlacement` class is used to manage the position and state of windows in Windows applications.
@@ -60,7 +62,7 @@ namespace System.Windows
         /// </summary>
         /// <param name="windowHandle">The handle of the window.</param>
         /// <returns>An instance of <see cref="WindowPlacement"/> with the current values of the window's placement,
-        /// or <c>null</c> if the operation fails.</returns>
+        /// or <see langword="null"/> if the operation fails.</returns>
         public static WindowPlacement? GetPlacement(nint windowHandle)
         {
             var placement = new WINDOWPLACEMENT()
@@ -86,7 +88,7 @@ namespace System.Windows
         /// </summary>
         /// <param name="windowHandle">The handle of the window.</param>
         /// <param name="windowPlacement">An instance of <see cref="WindowPlacement"/> specifying the new values for the window's placement.</param>
-        /// <returns><c>true</c> if the operation is successful, otherwise <c>false</c>.</returns>
+        /// <returns><see langword="true"/> if the operation is successful, otherwise <see langword="false"/>.</returns>
         public static bool SetPlacement(nint windowHandle, WindowPlacement? windowPlacement)
         {
             if (windowPlacement is null)

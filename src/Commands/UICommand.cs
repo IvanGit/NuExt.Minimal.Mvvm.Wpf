@@ -1,6 +1,6 @@
 ﻿using System.Windows.Input;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents a UI command with associated properties for use in various scenarios,

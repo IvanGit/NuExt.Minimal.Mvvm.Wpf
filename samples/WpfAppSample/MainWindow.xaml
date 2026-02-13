@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:minimal="http://schemas.minimalmvvm.com/winfx/xaml/mvvm"
+        xmlns:minimal="http://schemas.nuext.minimal/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MovieWpfApp"
         xmlns:viewModels="clr-namespace:MovieWpfApp.ViewModels"
@@ -17,10 +17,10 @@
         <minimal:WindowService/>
         <minimal:InputDialogService MessageBoxButtonLocalizer="{StaticResource MessageBoxButtonLocalizer}"
                                     ValidatesOnDataErrors="True"/>
-        <minimal:EventTrigger EventName="Closing" Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" />
-        <minimal:EventTrigger EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
-        <minimal:EventTrigger EventName="Loaded" Command="{Binding LoadedCommand}" />
-        <minimal:KeyTrigger Gesture="CTRL+O" Command="{Binding ShowMoviesCommand}" />
+        <minimal:EventToCommand EventName="Closing" Command="{Binding ClosingCommand}" PassEventArgsToCommand="True" />
+        <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+        <minimal:EventToCommand EventName="Loaded" Command="{Binding LoadedCommand}" />
+        <minimal:KeyToCommand Gesture="CTRL+O" Command="{Binding ShowMoviesCommand}" />
         <minimal:WindowPlacementService FileName="MainWindow" 
                                         DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"
                                         PlacementRestoredCommand="{Binding PlacementRestoredCommand}" 
@@ -37,7 +37,7 @@
                             <DataTemplate>
                                 <ItemsControl>
                                     <minimal:WindowService Name="CurrentWindowService"/>
-                                    <minimal:EventTrigger EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+                                    <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
                                 </ItemsControl>
                             </DataTemplate>
                         </Setter.Value>
@@ -45,7 +45,7 @@
                 </Style>
             </minimal:WindowedDocumentService.WindowStyle>
             <minimal:Interaction.Behaviors>
-                <minimal:EventTrigger EventName="ActiveDocumentChanged" Command="{Binding ActiveWindowChangedCommand}"/>
+                <minimal:EventToCommand EventName="ActiveDocumentChanged" Command="{Binding ActiveWindowChangedCommand}"/>
             </minimal:Interaction.Behaviors>
         </minimal:WindowedDocumentService>
     </minimal:Interaction.Behaviors>
@@ -64,7 +64,7 @@
                                                ActiveDocument="{Binding ActiveDocument}"
                                                FallbackViewType="{x:Type views:ErrorView}">
                     <minimal:Interaction.Behaviors>
-                        <minimal:EventTrigger EventName="ActiveDocumentChanged" Command="{Binding ActiveDocumentChangedCommand}"/>
+                        <minimal:EventToCommand EventName="ActiveDocumentChanged" Command="{Binding ActiveDocumentChangedCommand}"/>
                     </minimal:Interaction.Behaviors>
                 </minimal:TabbedDocumentService>
             </minimal:Interaction.Behaviors>

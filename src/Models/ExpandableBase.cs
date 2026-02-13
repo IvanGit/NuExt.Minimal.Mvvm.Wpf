@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents a base class for models that can be expanded or collapsed.
@@ -14,7 +14,7 @@ namespace Minimal.Mvvm.Windows
         private bool _isExpanded;
 
         /// <summary>
-        /// Collapses the object by setting the <see cref="IsExpanded"/> property to <c>false</c>.
+        /// Collapses the object by setting the <see cref="IsExpanded"/> property to <see langword="false"/>.
         /// </summary>
         public virtual void Collapse()
         {
@@ -22,7 +22,7 @@ namespace Minimal.Mvvm.Windows
         }
 
         /// <summary>
-        /// Expands the object by setting the <see cref="IsExpanded"/> property to <c>true</c>.
+        /// Expands the object by setting the <see cref="IsExpanded"/> property to <see langword="true"/>.
         /// </summary>
         public virtual void Expand()
         {

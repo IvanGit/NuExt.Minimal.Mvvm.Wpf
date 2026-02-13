@@ -1,14 +1,16 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using System.Windows.Controls;
 
-namespace System.Windows.Controls
+namespace Presentation.Wpf.Controls
 {
-    public static class VirtualizingStackPanelHelper
+    public static class VirtualizingStackPanelExtensions
     {
         private static readonly ConcurrentDictionary<Type, MethodInfo?> s_bringIndexIntoViewMethods = new();
 
-        static VirtualizingStackPanelHelper()
+        static VirtualizingStackPanelExtensions()
         {
 
         }

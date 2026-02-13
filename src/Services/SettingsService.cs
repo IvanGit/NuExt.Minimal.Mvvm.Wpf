@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Windows;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides a service for saving and loading settings.

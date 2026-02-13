@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Presentation.Wpf.Controls;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -11,42 +12,51 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
-    /// The TabbedDocumentService class is responsible for managing tabbed documents within a UI. 
-    /// It extends the DocumentServiceBase and implements interfaces for asynchronous document management and disposal. 
-    /// This service allows for the creation, binding, and lifecycle management of tabbed documents within MetroTabControl.
+    /// Manages tabbed documents within a TabControl. Handles creation, lifecycle, and disposal of documents as tabs.
+    /// This service extends DocumentServiceBase for asynchronous document management and implements IAsyncDocumentManagerService.
     /// </summary>
-    public sealed class TabbedDocumentService : DocumentServiceBase, IAsyncDocumentManagerService, IAsyncDisposable
+    public class TabbedDocumentService : DocumentServiceBase, IAsyncDocumentManagerService, IAsyncDisposable
     {
         #region TabbedDocument
 
-        private class TabbedDocument : AsyncDisposable, IAsyncDocument
+        protected class TabbedDocument : AsyncDisposable, IAsyncDocument
         {
-            private readonly AsyncLifetime _lifetime = new(continueOnCapturedContext: true);
+            private readonly AsyncLifetime _lifetime = new AsyncLifetime() { ContinueOnCapturedContext = true }
+#if DEBUG
+                .SetDebugInfo()
+#endif
+                ;
+            private readonly CancellationTokenSource _cts = new();
             private bool _isClosing;
 
             public TabbedDocument(TabbedDocumentService owner, TabItem tabItem)
-                 : base(continueOnCapturedContext: true)
             {
                 ArgumentNullException.ThrowIfNull(owner);
                 TabItem = tabItem ?? throw new ArgumentNullException(nameof(tabItem));
 
-                _lifetime.AddDisposable(CancellationTokenSource);
-                _lifetime.AddBracket(() => owner._documents.Add(this), () => owner._documents.Remove(this));
+                var viewModel = ViewModelHelper.GetViewModelFromView(TabItem.Content);
+                Debug.Assert(viewModel != null);
+
+                _lifetime.AddDisposable(_cts);
+                _lifetime.AddBracket(() => owner.AddDocument(this), () => owner.RemoveDocument(this));
                 _lifetime.Add(() => TabControl?.Items.Remove(TabItem));//second, remove tab item
                 _lifetime.Add(() => TabItem.ClearStyle());//first, clear tab item style
-                _lifetime.Add(() => BindingOperations.ClearBinding(TabItem, FrameworkElement.DataContextProperty));//third, detach vm
-                _lifetime.Add(DetachContent);//second, detach content
+                _lifetime.Add(() => owner.ClearAllBindings(TabItem));//third, detach vm
+                _lifetime.Add(() => ViewModelHelper.DetachContentFromContainer(TabItem));//second, detach content
                 _lifetime.AddAsync(DisposeViewModelAsync);//first, dispose vm
                 _lifetime.AddBracket(() => SetDocument(TabItem, this), () => SetDocument(TabItem, null));
                 _lifetime.AddBracket(
                     () => TabItem.IsVisibleChanged += OnTabIsVisibleChanged,
                     () => TabItem.IsVisibleChanged -= OnTabIsVisibleChanged);
-                _lifetime.AddBracket(
-                    () => ViewModelHelper.SetViewTitleBinding(TabItem.Content, HeaderedContentControl.HeaderProperty, TabItem),
-                    () => BindingOperations.ClearBinding(TabItem, HeaderedContentControl.HeaderProperty));
+                if (viewModel != null && ViewModelHelper.ViewModelHasTitleProperty(viewModel))
+                {
+                    _lifetime.AddBracket(
+                        () => ViewModelHelper.SetViewTitleBinding(TabItem.Content, HeaderedContentControl.HeaderProperty, TabItem),
+                        () => BindingOperations.ClearBinding(TabItem, HeaderedContentControl.HeaderProperty));
+                }
 
                 var dpd = DependencyPropertyDescriptor.FromProperty(HeaderedContentControl.HeaderProperty, typeof(HeaderedContentControl));
                 if (dpd != null)
@@ -56,23 +66,36 @@ namespace Minimal.Mvvm.Windows
                         () => dpd.RemoveValueChanged(TabItem, OnTabHeaderChanged));
                 }
                 Debug.Assert(dpd != null);
-                Debug.Assert(TabItem.DataContext == ViewModelHelper.GetViewModelFromView(TabItem.Content));
             }
 
             #region Properties
 
-            private CancellationTokenSource CancellationTokenSource { get; } = new();
+            public CancellationToken CancellationToken => _cts.Token;
 
+            /// <summary>
+            /// Gets or sets a value indicating whether the view model should be disposed when the document closes.
+            /// </summary>
             public bool DisposeOnClose { get; set; }
 
+            /// <summary>
+            /// Gets or sets a value indicating whether the tab should be hidden instead of closed.
+            /// </summary>
             public bool HideInsteadOfClose { get; set; }
 
+            /// <summary>
+            /// Gets or sets the identifier for this document.
+            /// </summary>
             public object Id { get; set; } = null!;
+
+            public bool IsClosing => _isClosing;
 
             private TabControl? TabControl => TabItem.Parent as TabControl;
 
-            private TabItem TabItem { get; }
+            public TabItem TabItem { get; }
 
+            /// <summary>
+            /// Gets or sets the document title.
+            /// </summary>
             public string? Title
             {
                 get => TabItem.Header?.ToString();
@@ -100,44 +123,52 @@ namespace Minimal.Mvvm.Windows
 
             #region Methods
 
-            public async ValueTask CloseAsync(bool force = true)
+            /// <inheritdoc/>
+            public ValueTask CloseAsync(bool force)
             {
-                if (_lifetime.IsTerminated || IsDisposing)
+                if (IsDisposingOrDisposed)
+                {
+                    return ValueTask.CompletedTask;
+                }
+
+                var dispatcher = TabItem.Dispatcher;
+                if (dispatcher.CheckAccess())
+                {
+                    return CloseAsyncCore(force);
+                }
+                return new ValueTask(dispatcher.InvokeAsync(async () => await CloseAsyncCore(force).ConfigureAwait(false)).Task.Unwrap());
+            }
+
+            private async ValueTask CloseAsyncCore(bool force)
+            {
+                Debug.Assert(TabItem.CheckAccess());
+                Debug.Assert(IsDisposed == false);
+
+                VerifyAccess();
+                CheckDisposed();
+
+                if (_isClosing)
                 {
                     return;
                 }
                 if (force)
                 {
 #if NET8_0_OR_GREATER
-                    await CancellationTokenSource.CancelAsync();
+                    await _cts.CancelAsync();
 #else
-                    CancellationTokenSource.Cancel();
+                    _cts.Cancel();
 #endif
-                }
-                if (_isClosing)
-                {
-                    return;
                 }
                 _isClosing = true;
                 try
                 {
                     if (!force)
                     {
-                        try
+                        if (await CanCloseAsync(TabItem, CancellationToken) == false)
                         {
-                            var viewModel = ViewModelHelper.GetViewModelFromView(TabItem.Content);
-                            if (viewModel is IAsyncDocumentContent documentContent && await documentContent.CanCloseAsync(CancellationTokenSource.Token) == false)
-                            {
-                                CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                                return;
-                            }
-                        }
-                        catch (OperationCanceledException) when (CancellationTokenSource.IsCancellationRequested)
-                        {
-                            //do nothing
+                            return;
                         }
                     }
-                    CloseTab();
                     await DisposeAsync().ConfigureAwait(false);
                 }
                 finally
@@ -146,34 +177,38 @@ namespace Minimal.Mvvm.Windows
                 }
             }
 
-            private void CloseTab()
+            protected override async ValueTask DisposeAsyncCore()
             {
+                Debug.Assert(ContinueOnCapturedContext);
+                Debug.Assert(CheckAccess());
+                VerifyAccess();
+#if NET8_0_OR_GREATER
+                await _cts.CancelAsync();
+#else
+                _cts.Cancel();
+#endif
                 Hide();
+                await _lifetime.DisposeAsync().ConfigureAwait(false);
             }
 
-            private void DetachContent()
-            {
-                var view = TabItem.Content;
-                Debug.Assert(view != null);
-                //First, detach DataContext from view
-                ViewModelHelper.DetachViewModel(view);
-                //Second, detach Content from tab item
-                TabItem.Content = null;
-                Debug.Assert(TabItem.DataContext == null);
-            }
-
-            private async ValueTask DisposeViewModelAsync()
+            private ValueTask DisposeViewModelAsync()
             {
                 var viewModel = ViewModelHelper.GetViewModelFromView(TabItem.Content);
                 Debug.Assert(viewModel != null);
                 if (DisposeOnClose && viewModel is IAsyncDisposable asyncDisposable)
                 {
-                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                    return asyncDisposable.DisposeAsync();
                 }
+                return ValueTask.CompletedTask;
             }
 
+            /// <summary>
+            /// Hides the document tab.
+            /// </summary>
             public void Hide()
             {
+                CheckDisposed();
+
                 if (TabItem.Visibility != Visibility.Collapsed)
                 {
                     TabItem.Visibility = Visibility.Collapsed;
@@ -181,14 +216,13 @@ namespace Minimal.Mvvm.Windows
                 TabItem.IsSelected = false;
             }
 
-            protected override ValueTask DisposeAsyncCore()
-            {
-                Debug.Assert(ContinueOnCapturedContext);
-                return _lifetime.DisposeAsync();
-            }
-
+            /// <summary>
+            /// Shows the document tab.
+            /// </summary>
             public void Show()
             {
+                CheckDisposed();
+
                 if (TabItem.Visibility != Visibility.Visible)
                 {
                     TabItem.Visibility = Visibility.Visible;
@@ -207,7 +241,7 @@ namespace Minimal.Mvvm.Windows
 
         public TabbedDocumentService()
         {
-            if (ControlViewModel.IsInDesignMode) return;
+            if (ViewModelHelper.IsInDesignMode) return;
             (_documents as INotifyPropertyChanged).PropertyChanged += OnDocumentsPropertyChanged;
         }
 
@@ -215,8 +249,10 @@ namespace Minimal.Mvvm.Windows
 
         private new TabControl? AssociatedObject => (TabControl?)base.AssociatedObject;
 
+        /// <inheritdoc/>
         public int Count => _documents.Count;
 
+        /// <inheritdoc/>
         public IEnumerable<IAsyncDocument> Documents => _documents;
 
         #endregion
@@ -227,9 +263,9 @@ namespace Minimal.Mvvm.Windows
         {
             if (!_isActiveDocumentChanging)
             {
+                _isActiveDocumentChanging = true;
                 try
                 {
-                    _isActiveDocumentChanging = true;
                     newValue?.Show();
                 }
                 finally
@@ -263,9 +299,19 @@ namespace Minimal.Mvvm.Windows
                                 continue;
                             }
                             var document = GetDocument(tab);
+                            Debug.Assert(document is null);
                             if (document is not null)
                             {
-                                await document.CloseAsync(force: true).ConfigureAwait(false);
+                                try
+                                {
+                                    await document.CloseAsync(force: true).ConfigureAwait(false);
+                                }
+                                catch (Exception ex)
+                                {
+                                    var message = $"Error closing document {document}: {ex.Message}";
+                                    Trace.WriteLine(message);
+                                    Debug.Fail(message);
+                                }
                             }
                         }
                     }
@@ -296,9 +342,9 @@ namespace Minimal.Mvvm.Windows
             {
                 return;
             }
+            _isActiveDocumentChanging = true;
             try
             {
-                _isActiveDocumentChanging = true;
                 ActiveDocument = (tabControl.SelectedItem is TabItem tabItem) ? GetDocument(tabItem) : null;
             }
             finally
@@ -311,6 +357,39 @@ namespace Minimal.Mvvm.Windows
 
         #region Methods
 
+        private void AddDocument(IAsyncDocument document)
+        {
+            VerifyAccess();
+            _documents.Add(document);
+        }
+
+        private void RemoveDocument(IAsyncDocument document)
+        {
+            VerifyAccess();
+            _documents.Remove(document);
+        }
+
+        protected static async ValueTask<bool> CanCloseAsync(TabItem tabItem, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var viewModel = ViewModelHelper.GetViewModelFromView(tabItem.Content);
+                switch (viewModel)
+                {
+                    case IAsyncDocumentContent documentContent when await documentContent.CanCloseAsync(cancellationToken) == false:
+                        cancellationToken.ThrowIfCancellationRequested();
+                        return false;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                //do nothing and return
+                return false;
+            }
+            return true;
+        }
+
+        /// <inheritdoc/>
         public async ValueTask<IAsyncDocument> CreateDocumentAsync(string? documentType, object? viewModel,
             object? parentViewModel, object? parameter, CancellationToken cancellationToken = default)
         {
@@ -319,21 +398,33 @@ namespace Minimal.Mvvm.Windows
 
             var view = await CreateViewAsync(documentType, cancellationToken);
 
-            var tabItem = new TabItem
-            {
-                Header = "Item",
-                Content = view
-            };
+            var tabItem = CreateTabItem();
+            tabItem.Content = view;
             ViewModelHelper.SetDataContextBinding(view, FrameworkElement.DataContextProperty, tabItem);
 
             await ViewModelHelper.InitializeViewAsync(view, viewModel, parentViewModel, parameter, cancellationToken);
 
             AssociatedObject.Items.Add(tabItem);
-            var document = new TabbedDocument(this, tabItem);
+            var document = new TabbedDocument(this, tabItem) { ContinueOnCapturedContext = true };
             return document;
         }
 
-        public async ValueTask DisposeAsync()
+        protected virtual TabItem CreateTabItem()
+        {
+            var tabItem = new TabItem
+            {
+                Header = "Item",
+            };
+            return tabItem;
+        }
+
+        protected virtual void ClearAllBindings(TabItem tabItem)
+        {
+            BindingOperations.ClearBinding(tabItem, FrameworkElement.DataContextProperty);
+        }
+
+        /// <inheritdoc/>
+        public async ValueTask CloseAllAsync()
         {
             try
             {
@@ -341,7 +432,7 @@ namespace Minimal.Mvvm.Windows
                 {
                     return;
                 }
-                await Task.WhenAll(_documents.ToList().Select(x => x.CloseAsync().AsTask())).ConfigureAwait(false);
+                await Task.WhenAll(_documents.ToList().Select(async x => await x.CloseAsync().ConfigureAwait(false))).ConfigureAwait(false);
                 if (_documents.Count == 0)
                 {
                     return;
@@ -377,6 +468,13 @@ namespace Minimal.Mvvm.Windows
             }
         }
 
+        /// <inheritdoc/>
+        public async ValueTask DisposeAsync()
+        {
+            await CloseAllAsync().ConfigureAwait(false);
+            GC.SuppressFinalize(this);
+        }
+
         /// <inheritdoc />
         protected override void OnAttached()
         {
@@ -402,7 +500,7 @@ namespace Minimal.Mvvm.Windows
             base.OnDetaching();
         }
 
-        private Lifetime? SubscribeTabControl(TabControl? tabControl)
+        protected virtual Lifetime? SubscribeTabControl(TabControl? tabControl)
         {
             if (tabControl == null)
             {
@@ -412,7 +510,11 @@ namespace Minimal.Mvvm.Windows
             {
                 Throw.InvalidOperationException("Can't use not null ItemsSource in this service.");
             }
-            var lifetime = new Lifetime();
+            var lifetime = new Lifetime()
+#if DEBUG
+                .SetDebugInfo()
+#endif
+                ;
             if (tabControl.Items is INotifyCollectionChanged collection)
             {
                 lifetime.AddBracket(() => collection.CollectionChanged += OnTabControlItemsCollectionChanged,
@@ -424,11 +526,5 @@ namespace Minimal.Mvvm.Windows
         }
 
         #endregion
-    }
-
-    internal static partial class EventArgsCache
-    {
-        internal static readonly PropertyChangedEventArgs CountPropertyChanged = new(nameof(IAsyncDocumentManagerService.Count));
-        internal static readonly PropertyChangedEventArgs TitlePropertyChanged = new(nameof(IAsyncDocument.Title));
     }
 }

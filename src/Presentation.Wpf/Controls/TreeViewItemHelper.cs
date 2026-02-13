@@ -1,10 +1,11 @@
 ﻿using System.Diagnostics;
+using System.Windows.Controls;
 using System.Windows.Media;
 
 //How to: Find a TreeViewItem in a TreeView
 //https://learn.microsoft.com/en-us/dotnet/desktop/wpf/controls/how-to-find-a-treeviewitem-in-a-treeview?view=netframeworkdesktop-4.8
 
-namespace System.Windows.Controls
+namespace Presentation.Wpf.Controls
 {
     public static class TreeViewItemHelper
     {

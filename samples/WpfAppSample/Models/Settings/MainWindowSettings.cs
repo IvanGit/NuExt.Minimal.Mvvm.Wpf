@@ -7,9 +7,9 @@ namespace MovieWpfApp.Models
         [Notify]
         private bool _moviesOpened;
 
-        protected override void OnInitialize()
+        protected override void InitializeCore()
         {
-            base.OnInitialize();
+            base.InitializeCore();
             MoviesOpened = true;
         }
     }

@@ -1,10 +1,10 @@
-﻿#if NETFRAMEWORK || WINDOWS
+﻿using Minimal.Behaviors.Wpf;
 using System;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Markup;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Represents a base class for services that can be attached to a FrameworkElement.
@@ -14,30 +14,39 @@ namespace Minimal.Mvvm.Windows
     [RuntimeNameProperty(nameof(Name))]
     public abstract class ServiceBase<T> : Behavior<T> where T : FrameworkElement
     {
+#if DEBUG
+        public string? DebugName { get; private set; }
+#endif
+
         #region Dependency Properties
 
         /// <summary>
         /// Identifies the DataContext dependency property.
         /// </summary>
         private static readonly DependencyProperty DataContextProperty = DependencyProperty.Register(
-            nameof(FrameworkElement.DataContext), typeof(object), typeof(ServiceBase<T>),
-            new PropertyMetadata(null, (d, e) => ((ServiceBase<T>)d).OnDataContextChanged(e.OldValue, e.NewValue)));
+            nameof(DataContext), typeof(object), typeof(ServiceBase<T>),
+            new PropertyMetadata(defaultValue: null, (d, e) => ((ServiceBase<T>)d).OnDataContextChanged(e.OldValue, e.NewValue)));
 
         /// <summary>
         /// Identifies the <see cref="Name"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty NameProperty = DependencyProperty.Register(
             nameof(Name), typeof(string), typeof(ServiceBase<T>),
-            new PropertyMetadata(null, (d, e) => ((ServiceBase<T>)d).OnNameChanged((string?)e.OldValue, (string?)e.NewValue)));
+            new PropertyMetadata(defaultValue: null, (d, e) => ((ServiceBase<T>)d).OnNameChanged((string?)e.OldValue, (string?)e.NewValue)));
 
         #endregion
 
         #region Properties
 
         /// <summary>
+        /// Gets the DataContext of the attached FrameworkElement.
+        /// </summary>
+        public object? DataContext => GetValue(DataContextProperty);
+
+        /// <summary>
         /// Gets or sets the name of the service.
         /// </summary>
-        public string Name
+        public string? Name
         {
             get => (string)GetValue(NameProperty);
             set => SetValue(NameProperty, value);
@@ -82,11 +91,11 @@ namespace Minimal.Mvvm.Windows
             {
                 return;
             }
-            if (oldDataContext is ViewModelBase oldViewModel)
+            if (oldDataContext is IServiceContainerProvider oldViewModel)
             {
                 oldViewModel.Services.UnregisterService(this);
             }
-            if (newDataContext is ViewModelBase newViewModel)
+            if (newDataContext is IServiceContainerProvider newViewModel)
             {
                 newViewModel.Services.RegisterService(GetType(), this, Name, true);
             }
@@ -100,15 +109,19 @@ namespace Minimal.Mvvm.Windows
         /// <param name="newName">The new Name value.</param>
         protected virtual void OnNameChanged(string? oldName, string? newName)
         {
+#if DEBUG
+            DebugName = newName;
+#endif
             if (!ShouldRegisterInViewModel)
             {
                 return;
             }
+
             if (string.Equals(oldName, newName, StringComparison.Ordinal))
             {
                 return;
             }
-            if (GetValue(DataContextProperty) is ViewModelBase viewModel)
+            if (DataContext is IServiceContainerProvider viewModel)
             {
                 viewModel.Services.UnregisterService(this);
                 viewModel.Services.RegisterService(GetType(), this, newName, true);
@@ -152,4 +165,3 @@ namespace Minimal.Mvvm.Windows
         #endregion
     }
 }
-#endif

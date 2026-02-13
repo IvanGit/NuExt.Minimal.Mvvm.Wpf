@@ -1,4 +1,4 @@
-﻿namespace Minimal.Mvvm.Windows
+﻿namespace Minimal.Mvvm.Wpf
 {
     partial class MediaElementService
     {

@@ -1,74 +1,39 @@
-﻿#if NETFRAMEWORK || WINDOWS
-
+﻿using Presentation.Wpf;
 using System;
+using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
-    /// <summary>
-    /// Defines a service interface for controlling the visibility and state of a window.
-    /// </summary>
-    public interface IWindowService
-    {
-        /// <summary>
-        /// Gets the Window associated with this service.
-        /// </summary>
-        Window? Window { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether the window is closed.
-        /// </summary>
-        bool IsClosed { get; }
-
-        /// <summary>
-        /// Gets a value indicating whether the window is visible.
-        /// </summary>
-        bool IsVisible { get; }
-
-        /// <summary>
-        /// Activates the window, bringing it to the foreground.
-        /// </summary>
-        void Activate();
-
-        /// <summary>
-        /// Closes the window.
-        /// </summary>
-        void Close();
-
-        /// <summary>
-        /// Hides the window.
-        /// </summary>
-        void Hide();
-
-        /// <summary>
-        /// Shows the window.
-        /// </summary>
-        void Show();
-
-        /// <summary>
-        /// Minimizes the window.
-        /// </summary>
-        void Minimize();
-
-        /// <summary>
-        /// Maximizes the window.
-        /// </summary>
-        void Maximize();
-
-        /// <summary>
-        /// Restores the window to its normal state.
-        /// </summary>
-        void Restore();
-    }
-
     /// <summary>
     /// Provides a service for interacting with a Window associated with a FrameworkElement.
     /// </summary>
     public class WindowService : WindowServiceBase, IWindowService
     {
+        #region Dependency Properties
+
+        /// <summary>
+        /// Identifies the ClosingCommand dependency property.
+        /// </summary>
+        public static readonly DependencyProperty ClosingCommandProperty = DependencyProperty.Register(
+            nameof(ClosingCommand), typeof(ICommand), typeof(WindowService),
+            new PropertyMetadata(defaultValue: null, (d, e) => ((WindowService)d).OnClosingCommandChanged((ICommand)e.OldValue, (ICommand)e.NewValue)));
+
+        #endregion
+
         private bool? _isClosed;
 
         #region Properties
+
+        /// <summary>
+        /// Gets or sets the command to execute when the Closing event is raised.
+        /// </summary>
+        public ICommand? ClosingCommand
+        {
+            get => (ICommand?)GetValue(ClosingCommandProperty);
+            set => SetValue(ClosingCommandProperty, value);
+        }
 
         /// <inheritdoc />
         public bool IsClosed => _isClosed == true;
@@ -79,6 +44,24 @@ namespace Minimal.Mvvm.Windows
         #endregion
 
         #region Event Handlers
+
+        protected virtual void OnClosingCommandChanged(ICommand? oldCommand, ICommand? newCommand)
+        {
+
+        }
+
+        private void OnWindowClosing(object? sender, CancelEventArgs e)
+        {
+            var command = ClosingCommand;
+            if (command == null)
+            {
+                return;
+            }
+            if (command.CanExecute(e))
+            {
+                command.Execute(e);
+            }
+        }
 
         private void OnWindowClosed(object? sender, EventArgs e)
         {
@@ -92,7 +75,8 @@ namespace Minimal.Mvvm.Windows
         /// <inheritdoc />
         public void Activate()
         {
-            if (_isClosed == true)
+            VerifyAccess();
+            if (_isClosed == true || !IsEnabled)
             {
                 return;
             }
@@ -114,7 +98,8 @@ namespace Minimal.Mvvm.Windows
         /// <inheritdoc />
         public void Close()
         {
-            if (_isClosed == true)
+            VerifyAccess();
+            if (_isClosed == true || !IsEnabled)
             {
                 return;
             }
@@ -124,7 +109,8 @@ namespace Minimal.Mvvm.Windows
         /// <inheritdoc />
         public void Hide()
         {
-            if (_isClosed == true)
+            VerifyAccess();
+            if (_isClosed == true || !IsEnabled)
             {
                 return;
             }
@@ -142,14 +128,15 @@ namespace Minimal.Mvvm.Windows
         /// <inheritdoc />
         public void Show()
         {
-            if (_isClosed == true)
+            VerifyAccess();
+            if (_isClosed == true || !IsEnabled)
             {
                 return;
             }
 
             try
             {
-                Window?.Show();
+                Window?.BringToFront();
             }
             catch (InvalidOperationException)
             {
@@ -160,51 +147,47 @@ namespace Minimal.Mvvm.Windows
         /// <inheritdoc />
         public void Minimize()
         {
-            if (_isClosed == true)
+            VerifyAccess();
+            if (_isClosed == true || !IsEnabled)
             {
                 return;
             }
-            if (Window != null)
-            {
-                Window.WindowState = WindowState.Minimized;
-            }
+            Window?.WindowState = WindowState.Minimized;
         }
 
         /// <inheritdoc />
         public void Maximize()
         {
-            if (_isClosed == true)
+            VerifyAccess();
+            if (_isClosed == true || !IsEnabled)
             {
                 return;
             }
-            if (Window != null)
-            {
-                Window.WindowState = WindowState.Maximized;
-            }
+            Window?.WindowState = WindowState.Maximized;
         }
 
         /// <inheritdoc />
         public void Restore()
         {
-            if (_isClosed == true)
+            VerifyAccess();
+            if (_isClosed == true || !IsEnabled)
             {
                 return;
             }
-            if (Window != null)
-            {
-                Window.WindowState = WindowState.Normal;
-            }
+            Window?.WindowState = WindowState.Normal;
         }
 
         protected override void OnWindowChanged(Window? oldWindow, Window? newWindow)
         {
             if (oldWindow != null)
             {
+                oldWindow.Closing -= OnWindowClosing;
                 oldWindow.Closed -= OnWindowClosed;
             }
             _isClosed = null;
             if (newWindow != null)
             {
+                newWindow.Closing += OnWindowClosing;
                 newWindow.Closed += OnWindowClosed;
             }
 
@@ -214,4 +197,3 @@ namespace Minimal.Mvvm.Windows
         #endregion
     }
 }
-#endif

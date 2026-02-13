@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="samples/WpfAppSample/MovieWpfApp.csproj" />
-  <Project Path="src/NuExt.Minimal.Mvvm.Windows.csproj" />
-</Solution>

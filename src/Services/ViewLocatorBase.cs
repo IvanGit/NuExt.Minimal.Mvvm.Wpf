@@ -1,12 +1,10 @@
-﻿using Minimal.Mvvm.Windows.Controls;
+﻿using Minimal.Mvvm.Wpf.Controls;
 using System;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Controls;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// An abstract base class that provides methods to locate and initialize views.
@@ -16,57 +14,34 @@ namespace Minimal.Mvvm.Windows
         #region Methods
 
         /// <summary>
-        /// Creates a view asynchronously based on the specified parameters.
-        /// </summary>
-        /// <param name="documentType">The type of document to create the view for.</param>
-        /// <param name="viewTemplate">The data template used for the view.</param>
-        /// <param name="viewTemplateSelector">The data template selector used to select the appropriate data template.</param>
-        /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains the created view object.</returns>
-        public virtual ValueTask<object?> CreateViewAsync(string? documentType, DataTemplate? viewTemplate, DataTemplateSelector? viewTemplateSelector, CancellationToken cancellationToken)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-#if NET
-                return ValueTask.FromCanceled<object?>(cancellationToken);
-#else
-                return new ValueTask<object?>(Task.FromCanceled<object?>(cancellationToken));
-#endif
-            }
-
-            if (viewTemplate != null || viewTemplateSelector != null)
-            {
-                return new ValueTask<object?>(new ContentPresenter()
-                {
-                    ContentTemplate = viewTemplate,
-                    ContentTemplateSelector = viewTemplateSelector
-                });
-            }
-
-            return GetOrCreateViewAsync(documentType, cancellationToken);
-        }
-
-        /// <summary>
         /// Gets or creates a view asynchronously based on the specified view name.
         /// </summary>
         /// <param name="viewName">The name of the view to get or create.</param>
         /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the created view object.</returns>
-        public virtual ValueTask<object?> GetOrCreateViewAsync(string? viewName, CancellationToken cancellationToken)
+        public virtual ValueTask<object> GetOrCreateViewAsync(string? viewName, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-#if NET
-                return ValueTask.FromCanceled<object?>(cancellationToken);
-#else
-                return new ValueTask<object?>(Task.FromCanceled<object?>(cancellationToken));
-#endif
+                return ValueTask.FromCanceled<object>(cancellationToken);
             }
 
             var viewType = GetViewType(viewName);
-            return viewType != null 
-                ? new ValueTask<object?>(CreateViewFromType(viewType, viewName)) 
-                : new ValueTask<object?>(CreateFallbackView(viewName));
+            if (viewType == null)
+            {
+                return ValueTask.FromResult(CreateFallbackView(viewName));
+            }
+
+            try
+            {
+                return ValueTask.FromResult(CreateViewFromType(viewType, viewName));
+            }
+            catch (Exception ex) when (ex is TargetInvocationException or MissingMethodException or MemberAccessException)
+            {
+                return ViewModelHelper.IsInDesignMode 
+                    ? ValueTask.FromResult(CreateFallbackView(viewName)) 
+                    : throw new InvalidOperationException($"Failed to create view \"{viewName}\" of type {viewType.FullName}.", ex);
+            }
         }
 
         /// <summary>
@@ -82,7 +57,7 @@ namespace Minimal.Mvvm.Windows
         /// <param name="viewType">The type of the view to create.</param>
         /// <param name="viewName">The name of the view.</param>
         /// <returns>The created view object.</returns>
-        protected virtual object? CreateViewFromType(Type viewType, string? viewName)
+        protected virtual object CreateViewFromType(Type viewType, string? viewName)
         {
             ArgumentNullException.ThrowIfNull(viewType);
             var ctor = viewType.GetConstructor(BindingFlags.Public | BindingFlags.Instance, null, [], null);
@@ -90,9 +65,7 @@ namespace Minimal.Mvvm.Windows
             {
                 return ctor.Invoke(null);
             }
-            return Activator.CreateInstance(viewType,
-                BindingFlags.CreateInstance | BindingFlags.Public | BindingFlags.Instance | BindingFlags.OptionalParamBinding,
-                null, null, null);
+            return Activator.CreateInstance(viewType, nonPublic: true)!;
         }
 
         /// <summary>
@@ -104,7 +77,7 @@ namespace Minimal.Mvvm.Windows
         {
             string errorMessage;
             if (string.IsNullOrEmpty(viewName)) errorMessage = "ViewType is not specified.";
-            else if (ControlViewModel.IsInDesignMode) errorMessage = $"[{viewName}]";
+            else if (ViewModelHelper.IsInDesignMode) errorMessage = $"[{viewName}]";
             else errorMessage = $"\"{viewName}\" type not found.";
             return new FallbackView() { Text = errorMessage };
         }

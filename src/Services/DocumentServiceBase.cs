@@ -1,10 +1,12 @@
-﻿using System;
+﻿using Presentation.Wpf;
+using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Provides a base class for services that manage documents associated with UI elements.
@@ -17,15 +19,17 @@ namespace Minimal.Mvvm.Windows
         /// Identifies the <see cref="ActiveDocument"/> dependency property.
         /// </summary>
         public static readonly DependencyProperty ActiveDocumentProperty = DependencyProperty.Register(
-            nameof(ActiveDocument), typeof(IAsyncDocument), typeof(DocumentServiceBase),
-            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (d, e) => ((DocumentServiceBase)d).OnActiveDocumentChanged(e.OldValue as IAsyncDocument, e.NewValue as IAsyncDocument)));
+            nameof(ActiveDocument), typeof(IAsyncDocument), typeof(DocumentServiceBase), 
+            new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, 
+                (d, e) => ((DocumentServiceBase)d).OnActiveDocumentChanged(e.OldValue as IAsyncDocument, e.NewValue as IAsyncDocument)));
 
         /// <summary>
         /// Identifies the Document attached dependency property.
         /// This property is used to associate an asynchronous document (IAsyncDocument) with a DependencyObject.
         /// </summary>
         public static readonly DependencyProperty DocumentProperty = DependencyProperty.RegisterAttached(
-            "Document", typeof(IAsyncDocument), typeof(DocumentServiceBase), new PropertyMetadata(null, (d, e) => OnDocumentChanged(d, (IAsyncDocument?)e.OldValue, (IAsyncDocument?)e.NewValue)));
+            "Document", typeof(IAsyncDocument), typeof(DocumentServiceBase), new PropertyMetadata(null, 
+                (d, e) => OnDocumentChanged(d, (IAsyncDocument?)e.OldValue, (IAsyncDocument?)e.NewValue)));
 
         /// <summary>
         /// Identifies the <see cref="FallbackViewType"/> dependency property.
@@ -78,6 +82,7 @@ namespace Minimal.Mvvm.Windows
         /// <param name="newValue">The newly active document, or <see langword="null"/>.</param>
         protected virtual void OnActiveDocumentChanged(IAsyncDocument? oldValue, IAsyncDocument? newValue)
         {
+            Debug.Assert(CheckAccess());
             ActiveDocumentChanged?.Invoke(this, new ActiveDocumentChangedEventArgs(oldValue, newValue));
         }
 
@@ -91,6 +96,7 @@ namespace Minimal.Mvvm.Windows
         {
             var doc = GetDocument(element);
             Debug.Assert(doc == newDocument);
+            _ = oldDocument;
         }
 
         #endregion
@@ -131,32 +137,44 @@ namespace Minimal.Mvvm.Windows
         /// </remarks>
         protected virtual object? CreateFallbackView()
         {
-            return FallbackViewType == null ? null : Activator.CreateInstance(FallbackViewType);
+            var fallbackViewType = CheckAccess() ? FallbackViewType : this.GetPropertySafe(() => FallbackViewType);
+            return fallbackViewType == null ? null : Activator.CreateInstance(fallbackViewType);
         }
 
         /// <inheritdoc/>
-        protected override ValueTask<object?> CreateViewAsync(string? documentType, CancellationToken cancellationToken)
+        protected override ValueTask<object> CreateViewAsync(string? documentType, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                return ValueTask.FromCanceled<object?>(cancellationToken);
+                return ValueTask.FromCanceled<object>(cancellationToken);
             }
 
-            if (documentType == null && ViewTemplate == null && ViewTemplateSelector == null)
+            bool hasNoViewTemplate = CheckAccess() 
+                ? ViewTemplate == null && ViewTemplateKey == null && ViewTemplateSelector == null 
+                : this.GetPropertySafe(() => ViewTemplate == null && ViewTemplateKey == null && ViewTemplateSelector == null);
+
+            if (documentType == null && hasNoViewTemplate)
             {
                 try
                 {
                     var view = CreateFallbackView();
-                    return view != null ? ValueTask.FromResult<object?>(view) : GetViewLocator().GetOrCreateViewAsync(documentType, cancellationToken);
+                    return view != null ? ValueTask.FromResult(view) : GetViewLocator().GetOrCreateViewAsync(documentType, cancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    return ValueTask.FromException<object?>(ex);
+                    return ValueTask.FromException<object>(ex);
                 }
             }
             return base.CreateViewAsync(documentType, cancellationToken);
         }
 
         #endregion
+    }
+
+    internal static partial class EventArgsCache
+    {
+        internal static readonly PropertyChangedEventArgs ActiveDocumentPropertyChanged = new(nameof(IAsyncDocumentManagerService.ActiveDocument));
+        internal static readonly PropertyChangedEventArgs CountPropertyChanged = new(nameof(IAsyncDocumentManagerService.Count));
+        internal static readonly PropertyChangedEventArgs TitlePropertyChanged = new(nameof(IAsyncDocument.Title));
     }
 }

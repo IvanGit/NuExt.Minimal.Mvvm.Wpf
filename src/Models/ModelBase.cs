@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace Minimal.Mvvm
 {
@@ -19,23 +20,15 @@ namespace Minimal.Mvvm
 
         private static readonly Func<Type, IDictionary<string, PropertyInfo>> s_typePropertiesFactory = GetProperties;
 
-        #region Properties
+        private readonly Lock _initLock = new();
+        private volatile bool _isInitialized;
 
-        private bool _isInitialized;
+        #region Properties
         /// <summary>
         /// Gets a value indicating whether the object has been initialized.
         /// </summary>
         [JsonIgnore]
-        public bool IsInitialized
-        {
-            get => _isInitialized;
-            private set
-            {
-                if (_isInitialized == value) return;
-                _isInitialized = value;
-                OnPropertyChanged(EventArgsCache.IsInitializedPropertyChanged);
-            }
-        }
+        public bool IsInitialized => _isInitialized;
 
         #endregion
 
@@ -91,34 +84,49 @@ namespace Minimal.Mvvm
         /// </remarks>
         public void Initialize()
         {
-            Debug.Assert(!IsInitialized);
-            if (IsInitialized)
+            if (_isInitialized) return;
+
+            lock (_initLock)
             {
-                return;
+                if (_isInitialized) return;
+                InitializeCore();
+                _isInitialized = true;
             }
-            try
+
+            OnPropertyChanged(EventArgsCache.IsInitializedPropertyChanged);
+        }
+
+        /// <summary>
+        /// Optionally uninitializes the object, performing necessary cleanup. This method can only be called once.
+        /// </summary>
+        /// <remarks>
+        /// If the object is already uninitialized, this method does nothing. 
+        /// </remarks>
+        public void Uninitialize()
+        {
+            if (!_isInitialized) return;
+
+            lock (_initLock)
             {
-                OnInitialize();
+                if (!_isInitialized) return;
+                UninitializeCore();
+                _isInitialized = false;
             }
-            catch (Exception ex)
-            {
-                Debug.Fail(ex.Message);
-                throw;
-            }
-            IsInitialized = true;
+
+            OnPropertyChanged(EventArgsCache.IsInitializedPropertyChanged);
         }
 
         /// <summary>
         /// Called during initialization to allow derived classes to perform custom initialization logic.
         /// </summary>
-        protected virtual void OnInitialize()
+        protected virtual void InitializeCore()
         {
         }
 
         /// <summary>
         /// Called during uninitialization to allow derived classes to perform custom uninitialization logic.
         /// </summary>
-        protected virtual void OnUninitialize()
+        protected virtual void UninitializeCore()
         {
         }
 
@@ -139,31 +147,6 @@ namespace Minimal.Mvvm
             }
             pi.SetValue(this, value);
             return true;
-        }
-
-        /// <summary>
-        /// Optionally uninitializes the object, performing necessary cleanup. This method can only be called once.
-        /// </summary>
-        /// <remarks>
-        /// If the object is already uninitialized, this method does nothing. 
-        /// </remarks>
-        public void Uninitialize()
-        {
-            Debug.Assert(IsInitialized);
-            if (!IsInitialized)
-            {
-                return;
-            }
-            try
-            {
-                OnUninitialize();
-            }
-            catch (Exception ex)
-            {
-                Debug.Fail(ex.Message);
-                throw;
-            }
-            IsInitialized = false;
         }
 
         #endregion

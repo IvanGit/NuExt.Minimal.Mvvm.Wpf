@@ -1,4 +1,4 @@
-﻿namespace System.Windows
+﻿namespace Presentation.Wpf.Data
 {
     /// <summary>
     /// The BindingProxy class is used to pass DataContext between elements without a direct binding path. 

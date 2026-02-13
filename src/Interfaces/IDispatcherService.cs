@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace Minimal.Mvvm.Windows
+namespace Minimal.Mvvm.Wpf
 {
     /// <summary>
     /// Service interface for thread synchronization and dispatcher operations.
@@ -9,7 +9,7 @@ namespace Minimal.Mvvm.Windows
     /// Extends <see cref="ISynchronizeInvoker"/> to provide standardized dispatcher access
     /// for cross-thread UI operations in WPF applications.
     /// </remarks>
-    public interface IDispatcherService : ISynchronizeInvoker
+    public interface IDispatcherService : INamedService, ISynchronizeInvoker
     {
     }
 }

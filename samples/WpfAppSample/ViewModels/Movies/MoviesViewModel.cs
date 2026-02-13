@@ -1,5 +1,5 @@
 ﻿using Minimal.Mvvm;
-using Minimal.Mvvm.Windows;
+using Minimal.Mvvm.Wpf;
 using MovieWpfApp.Models;
 using MovieWpfApp.Services;
 using System.Collections.ObjectModel;
@@ -44,16 +44,7 @@ namespace MovieWpfApp.ViewModels
 
         private void OnSelectedItemChanged(MovieModelBase? oldSelectedItem)
         {
-            var newSelectedItem = SelectedItem;
-            if (newSelectedItem != null)
-            {
-            }
-            NewGroupCommand?.RaiseCanExecuteChanged();
-            NewMovieCommand?.RaiseCanExecuteChanged();
-            EditCommand?.RaiseCanExecuteChanged();
-            DeleteCommand?.RaiseCanExecuteChanged();
-            OpenMovieCommand?.RaiseCanExecuteChanged();
-            OpenMovieExternalCommand?.RaiseCanExecuteChanged();
+            RaiseCanExecuteChanged();
         }
 
         #endregion
@@ -77,7 +68,7 @@ namespace MovieWpfApp.ViewModels
 
             VerifyAccess();
 
-            MessageBox.Show(GetService<WindowService>()?.Window, string.Format(Loc.An_error_has_occurred_in_Arg0_Arg1, callerName, ex.Message), Loc.Error, MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(GetWindow(), string.Format(Loc.An_error_has_occurred_in_Arg0_Arg1, callerName, ex.Message), Loc.Error, MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
         protected override async Task InitializeAsyncCore(CancellationToken cancellationToken)

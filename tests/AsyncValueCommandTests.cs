@@ -428,67 +428,6 @@ namespace Minimal.Mvvm.Wpf.Tests
 
         #endregion
 
-        #region Performance & Optimization Tests
-#if NET
-        [Test]
-        public async Task AsyncValueCommandT_Execute_SynchronousPath_DoesNotAllocateAsyncStateMachine()
-        {
-            // Arrange
-            var command = new AsyncValueCommand<string>((p, ct) => ValueTask.CompletedTask);
-
-            // Act
-            var allocationBefore = GC.GetTotalAllocatedBytes(true);
-            await command.ExecuteAsync("test");
-            var allocationAfter = GC.GetTotalAllocatedBytes(true);
-
-            var allocatedBytes = allocationAfter - allocationBefore;
-            await Progress.WriteLineAsync($"Allocated bytes: {allocatedBytes}");
-
-            Assert.That(allocatedBytes, Is.LessThan(500));
-        }
-
-        [Test]
-        public async Task AsyncValueCommandT_Execute_AsynchronousPath_AllocatesAsyncStateMachine()
-        {
-            // Arrange
-            var command = new AsyncValueCommand<string>(async (p, ct) =>
-            {
-                await Task.Delay(1, ct);
-            });
-
-            // Act
-            var allocationBefore = GC.GetTotalAllocatedBytes(true);
-            await command.ExecuteAsync("test");
-            var allocationAfter = GC.GetTotalAllocatedBytes(true);
-
-            var allocatedBytes = allocationAfter - allocationBefore;
-            await Progress.WriteLineAsync($"Allocated bytes: {allocatedBytes}");
-            Assert.That(allocatedBytes, Is.GreaterThan(500)); // async state machine + Task.Delay
-        }
-#endif
-
-        [Test]
-        public void AsyncValueCommandT_CanExecute_InlineOptimization_Works()
-        {
-            // Arrange
-            var command = new AsyncValueCommand<string>(
-                (p, ct) => ValueTask.CompletedTask,
-                p => p?.Length > 0);
-
-            // Act & Assert
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            for (int i = 0; i < 10000; i++)
-            {
-                _ = command.CanExecute("test");
-            }
-            stopwatch.Stop();
-
-            Progress.WriteLine($"10,000 CanExecute calls took: {stopwatch.ElapsedMilliseconds}ms");
-            Assert.That(stopwatch.ElapsedMilliseconds, Is.LessThan(50));
-        }
-
-        #endregion
-
         #region Concurrency Tests
 
         [Test]

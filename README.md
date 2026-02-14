@@ -1,55 +1,223 @@
 # NuExt.Minimal.Mvvm.Wpf
 
-`NuExt.Minimal.Mvvm.Wpf` is an extension for the lightweight MVVM framework [NuExt.Minimal.Mvvm](https://github.com/IvanGit/NuExt.Minimal.Mvvm). This package is specifically designed to enhance development for WPF applications by providing additional components and utilities that simplify development, reduce routine work, and add functionality to your MVVM applications. A key focus of this package is to offer robust support for asynchronous operations, making it easier to manage complex scenarios involving asynchronous tasks and commands.
+`NuExt.Minimal.Mvvm.Wpf` is a **WPF add‑on** for the lightweight MVVM core ([NuExt.Minimal.Mvvm](https://github.com/IvanGit/NuExt.Minimal.Mvvm)). It delivers **deterministic async UX**, **predictable window and document services**, **parent–child view‑model patterns**, and **control/window‑oriented APIs**—with minimal ceremony and zero heavy dependencies.
 
-### Commonly Used Types
+[![NuGet](https://img.shields.io/nuget/v/NuExt.Minimal.Mvvm.Wpf.svg)](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.Wpf)
+[![Build](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/actions/workflows/ci.yml/badge.svg)](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/IvanGit/NuExt.Minimal.Mvvm.Wpf?label=license)](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/nuget/dt/NuExt.Minimal.Mvvm.Wpf.svg)](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.Wpf)
 
-- **`Minimal.Mvvm.ModelBase`**: Base class for creating bindable models.
-- **`Minimal.Mvvm.Wpf.ControlViewModel`**: Base class for control-specific ViewModels and designed for asynchronous disposal.
-- **`Minimal.Mvvm.Wpf.DocumentContentViewModelBase`**: Base class for ViewModels that represent document content.
-- **`Minimal.Mvvm.Wpf.WindowViewModel`**: Base class for window-specific ViewModels.
-- **`Minimal.Mvvm.Wpf.IAsyncDialogService`**: Displays dialog windows asynchronously.
-- **`Minimal.Mvvm.Wpf.IAsyncDocument`**: Asynchronous document created with `IAsyncDocumentManagerService`.
-- **`Minimal.Mvvm.Wpf.IAsyncDocumentContent`**: Asynchronous document content that represent a view model.
-- **`Minimal.Mvvm.Wpf.IAsyncDocumentManagerService`**: Manages asynchronous documents.
-- **`Minimal.Mvvm.Wpf.InputDialogService`**: Shows modal dialogs asynchronously.
-- **`Minimal.Mvvm.Wpf.OpenWindowsService`**: Manages open window ViewModels within the application.
-- **`Minimal.Mvvm.Wpf.SettingsService`**: Facilitates saving and loading settings.
-- **`Minimal.Mvvm.Wpf.TabbedDocumentService`**: Manages tabbed documents within a UI.
-- **`Minimal.Mvvm.Wpf.ViewLocator`**: Locates and initializes views based on view models.
-- **`Minimal.Mvvm.Wpf.WindowedDocumentService`**: Manages windowed documents within a UI.
-- **`Minimal.Mvvm.Wpf.WindowPlacementService`**: Saves and restores window placement between runs.
+---
 
-### Recommended Companion Package
+## Highlights
 
-For an enhanced development experience, we highly recommend using the [`NuExt.Minimal.Mvvm.SourceGenerator`](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.SourceGenerator) package alongside this framework. It provides a source generator that produces boilerplate code for your ViewModels at compile time, significantly reducing the amount of repetitive coding tasks and allowing you to focus more on the application-specific logic.
+- **Parent–child and control/window‑oriented VMs**  
+  `ControlViewModel`/`WindowViewModel` model the UI the way WPF actually runs it: *parent–child relations*, deterministic event‑to‑command bindings via attached behaviors, and **dispatcher‑safe** operations via `IDispatcherService` (each UI thread owns its own dispatcher).
+
+- **Explicit view composition**  
+  Predictable view resolution with overridable conventions and a safe fallback view. Use templates when you have them, or a customizable `ViewLocator` when you don’t have one. See **View location** below for details.
+
+- **Async‑first UX**  
+  Dialogs and documents are orchestrated with proper async lifecycle: view creation, VM initialization, cancellation, and clean completion—*without UI deadlocks*. `IAsyncDialogService` shows modal dialogs with typed commands/results and optional validation. `IAsyncDocumentManagerService` manages the creation/activation/closure of documents that live as windows or tabs.
+
+- **Deterministic windows and documents**  
+  Restore/save window position/size/state (`WindowPlacementService`). Manage **documents as windows** (`WindowedDocumentService`) or **as tabs** (`TabbedDocumentService`) using a unified `IAsyncDocument` contract (ID, title, `Show/Hide/CloseAsync`, “dispose VM on close”, optional “hide instead of close”).
+
+- **Multi‑threaded WPF ready**  
+  Works in multi‑UI‑thread apps (each window on its own dispatcher). `DispatcherService` is injected per thread; window‑oriented services are dispatcher‑aware by design.
+
+- **Minimal deps, performance‑oriented**  
+  No heavy external frameworks. Hot paths avoid needless allocations, lifecycle is explicit, and services/events are carefully cleaned up.
+
+- **Compatibility:**  
+  WPF on **.NET 8/9/10** and **.NET Framework 4.6.2+**. Works with any MVVM stack and pairs naturally with [`NuExt.Minimal.Mvvm`](https://github.com/IvanGit/NuExt.Minimal.Mvvm).
+
+---
+
+## Key concepts
+
+- **Control/Window‑oriented VMs + DispatcherService** — VMs expose a *predictable* async lifecycle and run code on the owning UI thread via `IDispatcherService`. This is why the same patterns also work in **multi‑threaded WPF**, where each window has its own dispatcher.
+
+- **IAsyncDocument + IAsyncDocumentManagerService** — a document is a *hosted view + VM* with a stable contract (`Id`, `Title`, `Show/Hide/CloseAsync`, optional “dispose VM on close”). The **manager** creates documents (`CreateDocumentAsync`), tracks `ActiveDocument`, enumerates `Documents`, supports bulk `CloseAllAsync`, and plugs into WPF as **windows** (`WindowedDocumentService`) or **tabs** (`TabbedDocumentService`).
+
+- **IAsyncDialogService** — shows modal dialogs with a view resolved by name/template and a view‑model you provide; returns either a `MessageBoxResult` or a selected `UICommand`. The service handles view creation, optional title binding, validation (via `IDataErrorInfo` / `INotifyDataErrorInfo`), and clean teardown.
+
+## View location (predictable, overridable)
+
+Views are resolved in a strict order by the window/document services:
+**`ViewTemplate` → `ViewTemplateKey` → `ViewTemplateSelector` → `ViewLocator`**.  
+The default `ViewLocator` searches loaded assemblies, caches types, and produces a **fallback view** if nothing matches.
+
+**Register a custom view name** (e.g., when you don’t follow naming conventions):
+```csharp
+// if the default locator is the built-in ViewLocator, you can register names:
+if (Minimal.Mvvm.Wpf.ViewLocator.Default is Minimal.Mvvm.Wpf.ViewLocator v)
+{
+    v.RegisterType("MyCustomView", typeof(MyCustomView));
+}
+```
+**Fallback view**
+When no view is found (or view creation fails), a lightweight `FallbackView` is created with a readable error text. Override `ViewLocatorBase` or assign `ViewLocator.Default` if you need full control over lookup rules. If you need to alter caches or registrations during long‑running sessions, the built‑in locator also exposes `ClearCache()` and `ClearRegisteredTypes()`.
+
+## Windowed vs ViewWindowService
+
+**When to use which:**
+- Use `WindowedDocumentService` when you manage multiple long‑lived windows as **documents** (ID reuse, ActiveDocument, bulk close).
+- Use `ViewWindowService` when you occasionally **show a view as a window** (modal/non‑modal) without keeping a document roster.
+
+---
+
+## Quick Start (practical, minimal)
+
+### 1) Async dialog with validation + automatic window placement
+
+**XAML (attach services to your Window via behaviors):**
+```xml
+<Window
+  ...
+  xmlns:minimal="http://schemas.nuext.minimal/xaml">
+  <minimal:Interaction.Behaviors>
+    <minimal:WindowService/>
+    <minimal:InputDialogService
+        x:Name="Dialogs"
+        MessageBoxButtonLocalizer="{StaticResource MessageBoxButtonLocalizer}"
+        ValidatesOnDataErrors="True"
+        ValidatesOnNotifyDataErrors="True"/>
+    <minimal:WindowPlacementService
+        FileName="MainWindow"
+        DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
+  </minimal:Interaction.Behaviors>
+  <!-- ... your content -->
+</Window>
+```
+**ViewModel (show a dialog with a view and a VM):**
+```csharp
+private IAsyncDialogService Dialogs => GetService<IAsyncDialogService>("Dialogs");
+
+public async Task EditAsync(MyModel myModel, CancellationToken ct)
+{
+    await using var vm = new EditViewModel();
+    var result = await Dialogs.ShowDialogAsync(
+        MessageBoxButton.OKCancel,
+        title: "Edit",
+        documentType: "EditView",
+        viewModel: vm,
+        parentViewModel: this,
+        parameter: myModel,
+        cancellationToken: ct);
+
+    if (result != MessageBoxResult.OK) return;
+    // proceed with the edited model
+}
+```
+> WindowPlacementService is fully automatic once attached: it restores on load and saves on close—no extra code needed.
+
+### 2) Documents as windows (ID‑based reuse + per‑window behaviors)
+
+**XAML (window manager + per‑window template behaviors):**
+```xml
+<minimal:Interaction.Behaviors>
+  <minimal:WindowedDocumentService x:Name="Windows"
+                                   ActiveDocument="{Binding ActiveWindow}"
+                                   FallbackViewType="{x:Type views:ErrorView}">
+    <minimal:WindowedDocumentService.WindowStyle>
+      <Style TargetType="{x:Type Window}">
+        <Setter Property="minimal:Interaction.BehaviorsTemplate">
+          <Setter.Value>
+            <DataTemplate>
+              <ItemsControl>
+                <minimal:WindowService Name="CurrentWindowService"/>
+                <minimal:EventToCommand EventName="ContentRendered"
+                                        Command="{Binding ContentRenderedCommand}"/>
+              </ItemsControl>
+            </DataTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+    </minimal:WindowedDocumentService.WindowStyle>
+  </minimal:WindowedDocumentService>
+</minimal:Interaction.Behaviors>
+```
+**ViewModel (find by ID or create; dispose VM on close):**
+```csharp
+public IAsyncDocumentManagerService WindowManager => GetService<IAsyncDocumentManagerService>("Windows");
+
+public async Task OpenInWindowAsync(MyModel myModel, CancellationToken ct)
+{
+    var doc = await WindowManager.FindDocumentByIdOrCreateAsync(
+        id: myModel.Id,
+        createDocumentCallback: async mgr =>
+        {
+            var vm = new MyModelViewModel();
+            try
+            {
+                var d = await mgr.CreateDocumentAsync(
+                    documentType: "MyModelView",
+                    viewModel: vm,
+                    parentViewModel: this,
+                    parameter: myModel,
+                    cancellationToken: ct);
+                d.DisposeOnClose = true;
+                return d;
+            }
+            catch
+            {
+                await vm.DisposeAsync();
+                throw;
+            }
+        });
+
+    doc.Show();
+}
+```
+
+### 3) **Parent–child helper (sticky parent binding)**
+
+Use `ViewModelExtensions.ParentViewModel` to set a parent VM on child view models directly in XAML; enable `StickyParentBinding="True"` to keep it in sync on every `DataContext` change.
+
+```xml
+<ContentPresenter
+  xmlns:minimal="http://schemas.nuext.minimal/xaml"
+  minimal:ViewModelExtensions.ParentViewModel="{Binding}"
+  minimal:ViewModelExtensions.StickyParentBinding="True"
+  Content="{Binding ChildVm}"/>
+```
+
+### 4) Multi‑threaded WPF (per‑thread dispatcher, window‑oriented services)
+
+Each UI thread has its own `DispatcherService` instance injected via behaviors; window‑oriented services (`ViewWindowService` / `WindowedDocumentService`) are dispatcher‑aware and safe to call on the owning thread.
+See the runnable samples:
+
+- **Multi‑threaded app**: [WpfMultiThreadedApp](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/tree/main/samples/WpfMultiThreadedApp)
+- **Basic app (services/commands/VMs)**: [WpfAppSample](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/tree/main/samples/WpfAppSample)
+
+---
 
 ### Installation
 
-You can install `NuExt.Minimal.Mvvm.Wpf` via [NuGet](https://www.nuget.org/):
+Via [NuGet](https://www.nuget.org/):
 
 ```sh
 dotnet add package NuExt.Minimal.Mvvm.Wpf
 ```
 
-Or through the Visual Studio package manager:
+Or via Visual Studio:
 
 1. Go to `Tools -> NuGet Package Manager -> Manage NuGet Packages for Solution...`.
 2. Search for `NuExt.Minimal.Mvvm.Wpf`.
 3. Click "Install".
 
-### Usage Examples
-
-For comprehensive examples of how to use the package, refer to the [samples](samples) directory in this repository and the [NuExt.Minimal.Mvvm.MahApps.Metro](https://github.com/IvanGit/NuExt.Minimal.Mvvm.MahApps.Metro) repository. These samples illustrate best practices for using these extensions.
+**Nice to have**: [NuExt.Minimal.Mvvm.SourceGenerator](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.SourceGenerator) to remove boilerplate in view‑models.
+Also see [NuExt.Minimal.Mvvm.MahApps.Metro](https://github.com/IvanGit/NuExt.Minimal.Mvvm.MahApps.Metro) - a NuGet package that provides extensions for integrating with [MahApps.Metro](https://github.com/MahApps/MahApps.Metro).
 
 ### Contributing
 
-Contributions are welcome! Feel free to submit issues, fork the repository, and send pull requests. Your feedback and suggestions for improvement are highly appreciated.
+Issues and PRs are welcome. Keep changes minimal and performance-conscious.
 
 ### Acknowledgements
 
-Special thanks to the creators and maintainers of the [DevExpress MVVM Framework](https://github.com/DevExpress/DevExpress.Mvvm.Free). The author has been inspired by its advanced features and design philosophy for many years. However, as technology evolves, the DevExpress MVVM Framework has started to resemble more of a legacy framework, falling behind modern asynchronous best practices and contemporary development paradigms. The need for better support for asynchronous programming, greater simplicity, and improved performance led to the creation of these projects.
+The DevExpress MVVM Framework has been a long‑time source of inspiration. **NuExt.Minimal.Mvvm.Wpf** distills similar ideas into a lightweight, async‑first, and explicit composition model tailored for contemporary WPF apps.
 
 ### License
 
-Licensed under the MIT License. See the LICENSE file for details.
+MIT. See LICENSE.

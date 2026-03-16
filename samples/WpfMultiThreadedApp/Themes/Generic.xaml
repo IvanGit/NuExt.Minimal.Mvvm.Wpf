@@ -1,22 +1,22 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:minimal="http://schemas.nuext.minimal/xaml"
+                    xmlns:nx="http://schemas.nuext.minimal/xaml"
                     xmlns:templating="clr-namespace:WpfMultiThreadedApp.Templating"
                     xmlns:viewModels="clr-namespace:WpfMultiThreadedApp.ViewModels" 
                     xmlns:views="clr-namespace:WpfMultiThreadedApp.Views">
 
-    <minimal:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
-    <minimal:BooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" Invert="True" />
-    <minimal:BooleanInverterConverter x:Key="BooleanInverterConverter" />
+    <nx:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    <nx:BooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" Invert="True" />
+    <nx:BooleanInverterConverter x:Key="BooleanInverterConverter" />
 
     <!-- Attached behaviors for City Window -->
     <DataTemplate x:Key="CityBehaviorsTemplateKey" DataType="{x:Type viewModels:CityTimeZoneViewModel}">
         <ItemsControl>
-            <minimal:DispatcherService Name="ChildDispatcherService"/>
-            <minimal:WindowService Name="CurrentWindowService" ClosingCommand="{Binding ClosingCommand}"/>
-            <minimal:WindowPlacementService FileName="{Binding Parameter.Name}" 
-                                            DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
-            <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+            <nx:DispatcherService Name="ChildDispatcherService"/>
+            <nx:WindowService Name="CurrentWindowService" ClosingCommand="{Binding ClosingCommand}"/>
+            <nx:WindowPlacementService FileName="{Binding Parameter.Name}" 
+                                       DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
+            <nx:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
         </ItemsControl>
     </DataTemplate>
 
@@ -26,7 +26,7 @@
         <Setter Property="MinHeight" Value="400"/>
         <Setter Property="Width" Value="500"/>
         <Setter Property="MinWidth" Value="500"/>
-        <Setter Property="minimal:Interaction.BehaviorsTemplate" Value="{StaticResource CityBehaviorsTemplateKey}"/>
+        <Setter Property="nx:Interaction.BehaviorsTemplate" Value="{StaticResource CityBehaviorsTemplateKey}"/>
     </Style>
 
     <!-- City View Template -->
@@ -37,24 +37,24 @@
     <!-- Attached behaviors for MainWindow when using WindowedDocumentService -->
     <DataTemplate x:Key="WindowManagerDataTemplate" DataType="{x:Type viewModels:MainWindowViewModel}">
         <ItemsControl>
-            <minimal:WindowService ClosingCommand="{Binding ClosingCommand}"/>
-            <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
-            <minimal:WindowPlacementService FileName="MainWindow" 
-                                            DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
-            <minimal:WindowedDocumentService x:Name="Documents" WindowStartupLocation="CenterOwner"
-                                             WindowStyleKey="CityWindowStyleKey" ViewTemplateKey="CityViewTemplateKey"/>
+            <nx:WindowService ClosingCommand="{Binding ClosingCommand}"/>
+            <nx:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+            <nx:WindowPlacementService FileName="MainWindow" 
+                                       DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
+            <nx:WindowedDocumentService x:Name="Documents" WindowStartupLocation="CenterOwner"
+                                        WindowStyleKey="CityWindowStyleKey" ViewTemplateKey="CityViewTemplateKey"/>
         </ItemsControl>
     </DataTemplate>
 
     <!-- Attached behaviors for MainWindow when using ViewWindowService -->
     <DataTemplate x:Key="ViewFactoryDataTemplate" DataType="{x:Type viewModels:MainWindowViewModel}">
         <ItemsControl>
-            <minimal:WindowService ClosingCommand="{Binding ClosingCommand}"/>
-            <minimal:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
-            <minimal:WindowPlacementService FileName="MainWindow" 
-                                            DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
-            <minimal:ViewWindowService x:Name="Windows" WindowStartupLocation="CenterOwner"
-                                       WindowStyleKey="CityWindowStyleKey" ViewTemplateKey="CityViewTemplateKey"/>
+            <nx:WindowService ClosingCommand="{Binding ClosingCommand}"/>
+            <nx:EventToCommand EventName="ContentRendered" Command="{Binding ContentRenderedCommand}"/>
+            <nx:WindowPlacementService FileName="MainWindow" 
+                                       DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
+            <nx:ViewWindowService x:Name="Windows" WindowStartupLocation="CenterOwner"
+                                  WindowStyleKey="CityWindowStyleKey" ViewTemplateKey="CityViewTemplateKey"/>
         </ItemsControl>
     </DataTemplate>
 

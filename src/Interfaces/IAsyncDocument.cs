@@ -1,51 +1,50 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace Minimal.Mvvm.Wpf
+namespace Minimal.Mvvm.Wpf;
+
+/// <summary>
+/// Defines an interface for an asynchronous document.
+/// </summary>
+public interface IAsyncDocument : IAsyncDisposable
 {
     /// <summary>
-    /// Defines an interface for an asynchronous document.
+    /// Gets or sets a value indicating whether the view model should be disposed when the view is closed.
     /// </summary>
-    public interface IAsyncDocument : IAsyncDisposable
-    {
-        /// <summary>
-        /// Gets or sets a value indicating whether the view model should be disposed when the view is closed.
-        /// </summary>
-        bool DisposeOnClose { get; set; }
+    bool DisposeOnClose { get; set; }
 
-        /// <summary>
-        /// Gets or sets a value indicating whether the document should be hidden instead of closed when the user closes it.
-        /// </summary>
-        bool HideInsteadOfClose { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating whether the document should be hidden instead of closed when the user closes it.
+    /// </summary>
+    bool HideInsteadOfClose { get; set; }
 
-        /// <summary>
-        /// Gets or sets the identifier of the document.
-        /// This ID uniquely identifies the document within the document manager.
-        /// </summary>
-        object Id { get; set; }
+    /// <summary>
+    /// Gets or sets the identifier of the document.
+    /// This ID uniquely identifies the document within the document manager.
+    /// </summary>
+    object Id { get; set; }
 
-        /// <summary>
-        /// Gets or sets the title of the document.
-        /// </summary>
-        string? Title { get; set; }
+    /// <summary>
+    /// Gets or sets the title of the document.
+    /// </summary>
+    string Title { get; set; }
 
-        /// <summary>
-        /// Closes the document asynchronously.
-        /// </summary>
-        /// <param name="force">If set to <see langword="true"/>, forces the document to close without cancellation request. Default is <see langword="true"/>.</param>
-        /// <returns>
-        /// A <see cref="ValueTask"/> representing the asynchronous operation.
-        /// </returns>
-        ValueTask CloseAsync(bool force = true);
+    /// <summary>
+    /// Closes the document asynchronously.
+    /// </summary>
+    /// <param name="force">If set to <see langword="true"/>, forces the document to close without cancellation request. Default is <see langword="true"/>.</param>
+    /// <returns>
+    /// A <see cref="ValueTask"/> representing the asynchronous operation.
+    /// </returns>
+    ValueTask CloseAsync(bool force = true);
 
-        /// <summary>
-        /// Hides the document.
-        /// </summary>
-        void Hide();
+    /// <summary>
+    /// Hides the document.
+    /// </summary>
+    void Hide();
 
-        /// <summary>
-        /// Shows the document.
-        /// </summary>
-        void Show();
-    }
+    /// <summary>
+    /// Shows the document.
+    /// </summary>
+    void Show();
 }

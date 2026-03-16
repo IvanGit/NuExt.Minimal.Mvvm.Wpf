@@ -3,11 +3,10 @@
              xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:minimal="http://schemas.nuext.minimal/xaml"
+             xmlns:nx="http://schemas.nuext.minimal/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:MovieWpfApp"
              xmlns:viewModels="clr-namespace:MovieWpfApp.ViewModels"
-             xmlns:models="clr-namespace:MovieWpfApp.Models"
              mc:Ignorable="d" 
              d:DataContext="{d:DesignInstance {x:Type viewModels:MoviesViewModel}, IsDesignTimeCreatable=True}"
              d:DesignHeight="450" d:DesignWidth="800">
@@ -17,7 +16,9 @@
 
         <DataTemplate x:Key="TreeViewItemBehaviors">
             <ContentControl>
-                <minimal:EventToCommand EventName="MouseDoubleClick" Command="{Binding Source={StaticResource MoviesProxy}, Path=DataContext.OpenMovieCommand}" EventArgsConverter="{StaticResource ItemsControlMouseEventArgsConverter}"/>
+                <nx:EventToCommand EventName="MouseDoubleClick" 
+                                   Command="{Binding Source={StaticResource MoviesProxy}, Path=DataContext.OpenMovieCommand}" 
+                                   SenderParameterPath="DataContext"/>
             </ContentControl>
         </DataTemplate>
 
@@ -30,15 +31,15 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
             <Setter Property="Template" Value="{StaticResource Templates.TreeViewItem.Stretched}"/>
-            <Setter Property="minimal:Interaction.BehaviorsTemplate" Value="{StaticResource TreeViewItemBehaviors}"/>
+            <Setter Property="nx:Interaction.BehaviorsTemplate" Value="{StaticResource TreeViewItemBehaviors}"/>
         </Style>
 
     </UserControl.Resources>
-    <minimal:Interaction.Behaviors>
-        <minimal:EventToCommand EventName="Loaded" Command="{Binding LoadedCommand}" />
-        <minimal:EventToCommand EventName="Unloaded" Command="{Binding UnloadedCommand}" />
-        <minimal:SettingsService DirectoryName="{Binding EnvironmentService.SettingsDirectory}"/>
-    </minimal:Interaction.Behaviors>
+    <nx:Interaction.Behaviors>
+        <nx:EventToCommand EventName="Loaded" Command="{Binding LoadedCommand}" />
+        <nx:EventToCommand EventName="Unloaded" Command="{Binding UnloadedCommand}" />
+        <nx:SettingsService DirectoryName="{Binding EnvironmentService.SettingsDirectory}"/>
+    </nx:Interaction.Behaviors>
     <DockPanel Margin="2">
 
         <StackPanel DockPanel.Dock="Left">
@@ -98,7 +99,7 @@
                     <TextBlock Text="{x:Static local:Loc.Director}"/>
                 </Border>
                 <Border Grid.Column="3" BorderThickness="0,1,1,0">
-                    <Rectangle Width="{Binding Path=(minimal:ScrollBarVisibilityBehavior.VerticalScrollBarActualWidth), ElementName=MoviesTree}"/>
+                    <Rectangle Width="{Binding Path=(nx:ScrollBarVisibilityBehavior.VerticalScrollBarActualWidth), ElementName=MoviesTree}"/>
                 </Border>
             </Grid>
 
@@ -115,12 +116,12 @@
                       VirtualizingStackPanel.IsVirtualizing="True"
                       VirtualizingStackPanel.VirtualizationMode="Recycling"
                       ItemContainerStyle="{StaticResource TreeViewItemContainerStyle}">
-                <minimal:Interaction.Behaviors>
-                    <minimal:TreeViewSelectedItemBehavior SelectedItem="{Binding SelectedItem}" />
-                    <minimal:ScrollBarVisibilityBehavior />
-                    <minimal:TreeViewDragDropBehavior MoveCommand="{Binding MoveCommand}" />
-                    <!--<minimal:EventToCommand PassEventArgsToCommand="True" Command="{Binding MouseDoubleClickCommand}" CommandParameter="{Binding Path=SelectedItem, RelativeSource={RelativeSource FindAncestor, AncestorType=TreeView, AncestorLevel=1}}" EventName="MouseDoubleClick" />-->
-                </minimal:Interaction.Behaviors>
+                <nx:Interaction.Behaviors>
+                    <nx:TreeViewSelectedItemBehavior SelectedItem="{Binding SelectedItem}" />
+                    <nx:ScrollBarVisibilityBehavior />
+                    <nx:TreeViewDragDropBehavior MoveCommand="{Binding MoveCommand}" />
+                    <!--<nx:EventToCommand PassEventArgsToCommand="True" Command="{Binding MouseDoubleClickCommand}" CommandParameter="{Binding Path=SelectedItem, RelativeSource={RelativeSource FindAncestor, AncestorType=TreeView, AncestorLevel=1}}" EventName="MouseDoubleClick" />-->
+                </nx:Interaction.Behaviors>
             </TreeView>
         </DockPanel>
 

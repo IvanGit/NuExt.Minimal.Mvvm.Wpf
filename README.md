@@ -1,10 +1,10 @@
 # NuExt.Minimal.Mvvm.Wpf
 
-`NuExt.Minimal.Mvvm.Wpf` is a **WPF add‑on** for the lightweight MVVM core ([NuExt.Minimal.Mvvm](https://github.com/IvanGit/NuExt.Minimal.Mvvm)). It delivers **deterministic async UX**, **predictable window and document services**, **parent–child view‑model patterns**, and **control/window‑oriented APIs**—with minimal ceremony and zero heavy dependencies.
+`NuExt.Minimal.Mvvm.Wpf` is a **WPF add‑on** for the lightweight MVVM core ([NuExt.Minimal.Mvvm](https://github.com/nu-ext/NuExt.Minimal.Mvvm)). It delivers **deterministic async UX**, **predictable window and document services**, **parent–child view‑model patterns**, and **control/window‑oriented APIs**—with minimal ceremony and zero heavy dependencies.
 
 [![NuGet](https://img.shields.io/nuget/v/NuExt.Minimal.Mvvm.Wpf.svg)](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.Wpf)
-[![Build](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/actions/workflows/ci.yml/badge.svg)](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/IvanGit/NuExt.Minimal.Mvvm.Wpf?label=license)](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/blob/main/LICENSE)
+[![Build](https://github.com/nu-ext/NuExt.Minimal.Mvvm.Wpf/actions/workflows/ci.yml/badge.svg)](https://github.com/nu-ext/NuExt.Minimal.Mvvm.Wpf/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/nu-ext/NuExt.Minimal.Mvvm.Wpf?label=license)](https://github.com/nu-ext/NuExt.Minimal.Mvvm.Wpf/blob/main/LICENSE)
 [![Downloads](https://img.shields.io/nuget/dt/NuExt.Minimal.Mvvm.Wpf.svg)](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.Wpf)
 
 ---
@@ -30,7 +30,7 @@
   No heavy external frameworks. Hot paths avoid needless allocations, lifecycle is explicit, and services/events are carefully cleaned up.
 
 - **Compatibility:**  
-  WPF on **.NET 8/9/10** and **.NET Framework 4.6.2+**. Works with any MVVM stack and pairs naturally with [`NuExt.Minimal.Mvvm`](https://github.com/IvanGit/NuExt.Minimal.Mvvm).
+  WPF on **.NET 8/9/10** and **.NET Framework 4.6.2+**. Works with any MVVM stack and pairs naturally with [`NuExt.Minimal.Mvvm`](https://github.com/nu-ext/NuExt.Minimal.Mvvm).
 
 ---
 
@@ -75,18 +75,18 @@ When no view is found (or view creation fails), a lightweight `FallbackView` is 
 ```xml
 <Window
   ...
-  xmlns:minimal="http://schemas.nuext.minimal/xaml">
-  <minimal:Interaction.Behaviors>
-    <minimal:WindowService/>
-    <minimal:InputDialogService
+  xmlns:nx="http://schemas.nuext.minimal/xaml">
+  <nx:Interaction.Behaviors>
+    <nx:WindowService/>
+    <nx:InputDialogService
         x:Name="Dialogs"
         MessageBoxButtonLocalizer="{StaticResource MessageBoxButtonLocalizer}"
         ValidatesOnDataErrors="True"
         ValidatesOnNotifyDataErrors="True"/>
-    <minimal:WindowPlacementService
+    <nx:WindowPlacementService
         FileName="MainWindow"
         DirectoryName="{Binding EnvironmentService.SettingsDirectory, FallbackValue={x:Null}}"/>
-  </minimal:Interaction.Behaviors>
+  </nx:Interaction.Behaviors>
   <!-- ... your content -->
 </Window>
 ```
@@ -116,27 +116,27 @@ public async Task EditAsync(MyModel myModel, CancellationToken ct)
 
 **XAML (window manager + per‑window template behaviors):**
 ```xml
-<minimal:Interaction.Behaviors>
-  <minimal:WindowedDocumentService x:Name="Windows"
-                                   ActiveDocument="{Binding ActiveWindow}"
-                                   FallbackViewType="{x:Type views:ErrorView}">
-    <minimal:WindowedDocumentService.WindowStyle>
+<nx:Interaction.Behaviors>
+  <nx:WindowedDocumentService x:Name="Windows"
+                              ActiveDocument="{Binding ActiveWindow}"
+                              FallbackViewType="{x:Type views:ErrorView}">
+    <nx:WindowedDocumentService.WindowStyle>
       <Style TargetType="{x:Type Window}">
-        <Setter Property="minimal:Interaction.BehaviorsTemplate">
+        <Setter Property="nx:Interaction.BehaviorsTemplate">
           <Setter.Value>
             <DataTemplate>
               <ItemsControl>
-                <minimal:WindowService Name="CurrentWindowService"/>
-                <minimal:EventToCommand EventName="ContentRendered"
-                                        Command="{Binding ContentRenderedCommand}"/>
+                <nx:WindowService Name="CurrentWindowService"/>
+                <nx:EventToCommand EventName="ContentRendered"
+                                   Command="{Binding ContentRenderedCommand}"/>
               </ItemsControl>
             </DataTemplate>
           </Setter.Value>
         </Setter>
       </Style>
-    </minimal:WindowedDocumentService.WindowStyle>
-  </minimal:WindowedDocumentService>
-</minimal:Interaction.Behaviors>
+    </nx:WindowedDocumentService.WindowStyle>
+  </nx:WindowedDocumentService>
+</nx:Interaction.Behaviors>
 ```
 **ViewModel (find by ID or create; dispose VM on close):**
 ```csharp
@@ -177,9 +177,9 @@ Use `ViewModelExtensions.ParentViewModel` to set a parent VM on child view model
 
 ```xml
 <ContentPresenter
-  xmlns:minimal="http://schemas.nuext.minimal/xaml"
-  minimal:ViewModelExtensions.ParentViewModel="{Binding}"
-  minimal:ViewModelExtensions.StickyParentBinding="True"
+  xmlns:nx="http://schemas.nuext.minimal/xaml"
+  nx:ViewModelExtensions.ParentViewModel="{Binding}"
+  nx:ViewModelExtensions.StickyParentBinding="True"
   Content="{Binding ChildVm}"/>
 ```
 
@@ -188,12 +188,12 @@ Use `ViewModelExtensions.ParentViewModel` to set a parent VM on child view model
 Each UI thread has its own `DispatcherService` instance injected via behaviors; window‑oriented services (`ViewWindowService` / `WindowedDocumentService`) are dispatcher‑aware and safe to call on the owning thread.
 See the runnable samples:
 
-- **Multi‑threaded app**: [WpfMultiThreadedApp](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/tree/main/samples/WpfMultiThreadedApp)
-- **Basic app (services/commands/VMs)**: [WpfAppSample](https://github.com/IvanGit/NuExt.Minimal.Mvvm.Wpf/tree/main/samples/WpfAppSample)
+- **Multi‑threaded app**: [WpfMultiThreadedApp](https://github.com/nu-ext/NuExt.Minimal.Mvvm.Wpf/tree/main/samples/WpfMultiThreadedApp)
+- **Basic app (services/commands/VMs)**: [WpfAppSample](https://github.com/nu-ext/NuExt.Minimal.Mvvm.Wpf/tree/main/samples/WpfAppSample)
 
 ---
 
-### Installation
+## Installation
 
 Via [NuGet](https://www.nuget.org/):
 
@@ -208,16 +208,24 @@ Or via Visual Studio:
 3. Click "Install".
 
 **Nice to have**: [NuExt.Minimal.Mvvm.SourceGenerator](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.SourceGenerator) to remove boilerplate in view‑models.
-Also see [NuExt.Minimal.Mvvm.MahApps.Metro](https://github.com/IvanGit/NuExt.Minimal.Mvvm.MahApps.Metro) - a NuGet package that provides extensions for integrating with [MahApps.Metro](https://github.com/MahApps/MahApps.Metro).
+Also see [NuExt.Minimal.Mvvm.MahApps.Metro](https://www.nuget.org/packages/NuExt.Minimal.Mvvm.MahApps.Metro) - a NuGet package that provides extensions for integrating with [MahApps.Metro](https://github.com/MahApps/MahApps.Metro).
 
-### Contributing
+- [NuExt.Minimal.Mvvm](https://github.com/nu-ext/NuExt.Minimal.Mvvm)
+- [NuExt.Minimal.Mvvm.SourceGenerator](https://github.com/nu-ext/NuExt.Minimal.Mvvm.SourceGenerator)
+- [NuExt.Minimal.Behaviors.Wpf](https://github.com/nu-ext/NuExt.Minimal.Behaviors.Wpf)
+- [NuExt.Minimal.Mvvm.MahApps.Metro](https://github.com/nu-ext/NuExt.Minimal.Mvvm.MahApps.Metro)
+- [NuExt.System](https://github.com/nu-ext/NuExt.System)
+- [NuExt.System.Data](https://github.com/nu-ext/NuExt.System.Data)
+- [NuExt.System.Data.SQLite](https://github.com/nu-ext/NuExt.System.Data.SQLite)
+
+## Contributing
 
 Issues and PRs are welcome. Keep changes minimal and performance-conscious.
 
-### Acknowledgements
+## Acknowledgements
 
 The DevExpress MVVM Framework has been a long‑time source of inspiration. **NuExt.Minimal.Mvvm.Wpf** distills similar ideas into a lightweight, async‑first, and explicit composition model tailored for contemporary WPF apps.
 
-### License
+## License
 
 MIT. See LICENSE.

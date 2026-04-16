@@ -1,31 +1,30 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace MovieWpfApp.Converters
+namespace MovieWpfApp.Converters;
+
+public sealed class JsonMovieReleaseDateConverter : JsonConverter<DateTime>
 {
-    public sealed class JsonMovieReleaseDateConverter : JsonConverter<DateTime>
+    private const string DateFormat = "yyyy.MM.dd";
+
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        private const string DateFormat = "yyyy.MM.dd";
-
-        public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        if (reader.TokenType != JsonTokenType.String)
         {
-            if (reader.TokenType != JsonTokenType.String)
-            {
-                throw new JsonException();
-            }
-
-            var dateString = reader.GetString();
-            if (DateTime.TryParseExact(dateString, DateFormat, null, System.Globalization.DateTimeStyles.None, out var date))
-            {
-                return date;
-            }
-
-            throw new JsonException($"Unable to convert \"{dateString}\" to DateTime.");
+            throw new JsonException();
         }
 
-        public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        var dateString = reader.GetString();
+        if (DateTime.TryParseExact(dateString, DateFormat, null, System.Globalization.DateTimeStyles.None, out var date))
         {
-            writer.WriteStringValue(value.ToString(DateFormat));
+            return date;
         }
+
+        throw new JsonException($"Unable to convert \"{dateString}\" to DateTime.");
+    }
+
+    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.ToString(DateFormat));
     }
 }

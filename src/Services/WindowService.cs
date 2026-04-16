@@ -4,196 +4,195 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 
-namespace Minimal.Mvvm.Wpf
+namespace Minimal.Mvvm.Wpf;
+
+/// <summary>
+/// Provides a service for interacting with a Window associated with a FrameworkElement.
+/// </summary>
+public class WindowService : WindowServiceBase, IWindowService
 {
+    #region Dependency Properties
+
     /// <summary>
-    /// Provides a service for interacting with a Window associated with a FrameworkElement.
+    /// Identifies the ClosingCommand dependency property.
     /// </summary>
-    public class WindowService : WindowServiceBase, IWindowService
+    public static readonly DependencyProperty ClosingCommandProperty = DependencyProperty.Register(
+        nameof(ClosingCommand), typeof(ICommand), typeof(WindowService),
+        new PropertyMetadata(defaultValue: null, (d, e) => ((WindowService)d).OnClosingCommandChanged((ICommand)e.OldValue, (ICommand)e.NewValue)));
+
+    #endregion
+
+    private bool? _isClosed;
+
+    #region Properties
+
+    /// <summary>
+    /// Gets or sets the command to execute when the Closing event is raised.
+    /// </summary>
+    public ICommand? ClosingCommand
     {
-        #region Dependency Properties
+        get => (ICommand?)GetValue(ClosingCommandProperty);
+        set => SetValue(ClosingCommandProperty, value);
+    }
 
-        /// <summary>
-        /// Identifies the ClosingCommand dependency property.
-        /// </summary>
-        public static readonly DependencyProperty ClosingCommandProperty = DependencyProperty.Register(
-            nameof(ClosingCommand), typeof(ICommand), typeof(WindowService),
-            new PropertyMetadata(defaultValue: null, (d, e) => ((WindowService)d).OnClosingCommandChanged((ICommand)e.OldValue, (ICommand)e.NewValue)));
+    /// <inheritdoc />
+    public bool IsClosed => _isClosed == true;
 
-        #endregion
+    /// <inheritdoc />
+    public bool IsVisible => Window?.IsVisible == true;
 
-        private bool? _isClosed;
+    #endregion
 
-        #region Properties
+    #region Event Handlers
 
-        /// <summary>
-        /// Gets or sets the command to execute when the Closing event is raised.
-        /// </summary>
-        public ICommand? ClosingCommand
+    protected virtual void OnClosingCommandChanged(ICommand? oldCommand, ICommand? newCommand)
+    {
+
+    }
+
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        var command = ClosingCommand;
+        if (command == null)
         {
-            get => (ICommand?)GetValue(ClosingCommandProperty);
-            set => SetValue(ClosingCommandProperty, value);
+            return;
+        }
+        if (command.CanExecute(e))
+        {
+            command.Execute(e);
+        }
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        _isClosed = true;
+    }
+
+    #endregion
+
+    #region Methods
+
+    /// <inheritdoc />
+    public void Activate()
+    {
+        VerifyAccess();
+        if (_isClosed == true || !IsEnabled)
+        {
+            return;
         }
 
-        /// <inheritdoc />
-        public bool IsClosed => _isClosed == true;
-
-        /// <inheritdoc />
-        public bool IsVisible => Window?.IsVisible == true;
-
-        #endregion
-
-        #region Event Handlers
-
-        protected virtual void OnClosingCommandChanged(ICommand? oldCommand, ICommand? newCommand)
+        try
         {
-
-        }
-
-        private void OnWindowClosing(object? sender, CancelEventArgs e)
-        {
-            var command = ClosingCommand;
-            if (command == null)
+            if (!IsVisible)
             {
-                return;
+                Window?.Show();
             }
-            if (command.CanExecute(e))
-            {
-                command.Execute(e);
-            }
+            Window?.Activate();
         }
-
-        private void OnWindowClosed(object? sender, EventArgs e)
+        catch (InvalidOperationException)
         {
             _isClosed = true;
         }
-
-        #endregion
-
-        #region Methods
-
-        /// <inheritdoc />
-        public void Activate()
-        {
-            VerifyAccess();
-            if (_isClosed == true || !IsEnabled)
-            {
-                return;
-            }
-
-            try
-            {
-                if (!IsVisible)
-                {
-                    Window?.Show();
-                }
-                Window?.Activate();
-            }
-            catch (InvalidOperationException)
-            {
-                _isClosed = true;
-            }
-        }
-
-        /// <inheritdoc />
-        public void Close()
-        {
-            VerifyAccess();
-            if (_isClosed == true || !IsEnabled)
-            {
-                return;
-            }
-            Window?.Close();
-        }
-
-        /// <inheritdoc />
-        public void Hide()
-        {
-            VerifyAccess();
-            if (_isClosed == true || !IsEnabled)
-            {
-                return;
-            }
-
-            try
-            {
-                Window?.Hide();
-            }
-            catch (InvalidOperationException)
-            {
-                _isClosed = true;
-            }
-        }
-
-        /// <inheritdoc />
-        public void Show()
-        {
-            VerifyAccess();
-            if (_isClosed == true || !IsEnabled)
-            {
-                return;
-            }
-
-            try
-            {
-                Window?.BringToFront();
-            }
-            catch (InvalidOperationException)
-            {
-                _isClosed = true;
-            }
-        }
-
-        /// <inheritdoc />
-        public void Minimize()
-        {
-            VerifyAccess();
-            if (_isClosed == true || !IsEnabled)
-            {
-                return;
-            }
-            Window?.WindowState = WindowState.Minimized;
-        }
-
-        /// <inheritdoc />
-        public void Maximize()
-        {
-            VerifyAccess();
-            if (_isClosed == true || !IsEnabled)
-            {
-                return;
-            }
-            Window?.WindowState = WindowState.Maximized;
-        }
-
-        /// <inheritdoc />
-        public void Restore()
-        {
-            VerifyAccess();
-            if (_isClosed == true || !IsEnabled)
-            {
-                return;
-            }
-            Window?.WindowState = WindowState.Normal;
-        }
-
-        protected override void OnWindowChanged(Window? oldWindow, Window? newWindow)
-        {
-            if (oldWindow != null)
-            {
-                oldWindow.Closing -= OnWindowClosing;
-                oldWindow.Closed -= OnWindowClosed;
-            }
-            _isClosed = null;
-            if (newWindow != null)
-            {
-                newWindow.Closing += OnWindowClosing;
-                newWindow.Closed += OnWindowClosed;
-            }
-
-            base.OnWindowChanged(oldWindow, newWindow);
-        }
-
-        #endregion
     }
+
+    /// <inheritdoc />
+    public void Close()
+    {
+        VerifyAccess();
+        if (_isClosed == true || !IsEnabled)
+        {
+            return;
+        }
+        Window?.Close();
+    }
+
+    /// <inheritdoc />
+    public void Hide()
+    {
+        VerifyAccess();
+        if (_isClosed == true || !IsEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            Window?.Hide();
+        }
+        catch (InvalidOperationException)
+        {
+            _isClosed = true;
+        }
+    }
+
+    /// <inheritdoc />
+    public void Show()
+    {
+        VerifyAccess();
+        if (_isClosed == true || !IsEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            Window?.BringToFront();
+        }
+        catch (InvalidOperationException)
+        {
+            _isClosed = true;
+        }
+    }
+
+    /// <inheritdoc />
+    public void Minimize()
+    {
+        VerifyAccess();
+        if (_isClosed == true || !IsEnabled)
+        {
+            return;
+        }
+        Window?.WindowState = WindowState.Minimized;
+    }
+
+    /// <inheritdoc />
+    public void Maximize()
+    {
+        VerifyAccess();
+        if (_isClosed == true || !IsEnabled)
+        {
+            return;
+        }
+        Window?.WindowState = WindowState.Maximized;
+    }
+
+    /// <inheritdoc />
+    public void Restore()
+    {
+        VerifyAccess();
+        if (_isClosed == true || !IsEnabled)
+        {
+            return;
+        }
+        Window?.WindowState = WindowState.Normal;
+    }
+
+    protected override void OnWindowChanged(Window? oldWindow, Window? newWindow)
+    {
+        if (oldWindow != null)
+        {
+            oldWindow.Closing -= OnWindowClosing;
+            oldWindow.Closed -= OnWindowClosed;
+        }
+        _isClosed = null;
+        if (newWindow != null)
+        {
+            newWindow.Closing += OnWindowClosing;
+            newWindow.Closed += OnWindowClosed;
+        }
+
+        base.OnWindowChanged(oldWindow, newWindow);
+    }
+
+    #endregion
 }

@@ -1,13 +1,12 @@
-﻿namespace MovieWpfApp.Views
+﻿namespace MovieWpfApp.Views;
+
+/// <summary>
+/// Interaction logic for InputDialogView.xaml
+/// </summary>
+public partial class InputDialogView
 {
-    /// <summary>
-    /// Interaction logic for InputDialogView.xaml
-    /// </summary>
-    public partial class InputDialogView
+    public InputDialogView()
     {
-        public InputDialogView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

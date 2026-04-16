@@ -1,12 +1,11 @@
 ﻿using Minimal.Mvvm;
 
-namespace WpfMultiThreadedApp
+namespace WpfMultiThreadedApp;
+
+/// <summary>
+/// Localization
+/// </summary>
+[Localize("local.en-US.json")]
+internal static partial class Loc
 {
-    /// <summary>
-    /// Localization
-    /// </summary>
-    [Localize("local.en-US.json")]
-    internal static partial class Loc
-    {
-    }
 }

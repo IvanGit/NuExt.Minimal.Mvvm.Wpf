@@ -4,39 +4,38 @@ using MovieWpfApp.Services;
 using System.ComponentModel;
 using System.Diagnostics;
 
-namespace MovieWpfApp.ViewModels
+namespace MovieWpfApp.ViewModels;
+
+internal sealed class EditMovieViewModel : ControlViewModel, IDataErrorInfo
 {
-    internal sealed class EditMovieViewModel : ControlViewModel, IDataErrorInfo
+    #region Properties
+
+    public MovieModel Movie => (MovieModel)Parameter!;
+
+    #endregion
+
+    #region Services
+
+    public MoviesService MoviesService => GetService<MoviesService>()!;
+
+    #endregion
+
+    #region Methods
+
+    protected override Task InitializeAsyncCore(CancellationToken cancellationToken)
     {
-        #region Properties
-
-        public MovieModel Movie => (MovieModel)Parameter!;
-
-        #endregion
-
-        #region Services
-
-        public MoviesService MoviesService => GetService<MoviesService>()!;
-
-        #endregion
-
-        #region Methods
-
-        protected override Task InitializeAsyncCore(CancellationToken cancellationToken)
-        {
-            Debug.Assert(Movie != null, $"{nameof(Movie)} is null");
-            Debug.Assert(MoviesService != null, $"{nameof(MoviesService)} is null");
-            return base.InitializeAsyncCore(cancellationToken);
-        }
-
-        #endregion
-
-        #region IDataErrorInfo
-
-        public string Error => Movie.Error;
-
-        string IDataErrorInfo.this[string columnName] => null!;
-
-        #endregion
+        Debug.Assert(Movie != null, $"{nameof(Movie)} is null");
+        Debug.Assert(MoviesService != null, $"{nameof(MoviesService)} is null");
+        return base.InitializeAsyncCore(cancellationToken);
     }
+
+    #endregion
+
+    #region IDataErrorInfo
+
+    public string Error => Movie.Error;
+
+    string IDataErrorInfo.this[string columnName] => null!;
+
+    #endregion
 }

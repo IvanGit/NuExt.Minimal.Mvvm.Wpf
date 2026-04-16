@@ -1,8 +1,7 @@
 ﻿using Presentation.Wpf.Data;
 
-namespace WpfMultiThreadedApp
+namespace WpfMultiThreadedApp;
+
+public sealed class AppBindingProxy : BindingProxy<App>
 {
-    public sealed class AppBindingProxy : BindingProxy<App>
-    {
-    }
 }

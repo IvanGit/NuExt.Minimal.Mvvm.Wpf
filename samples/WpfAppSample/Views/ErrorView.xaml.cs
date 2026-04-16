@@ -1,13 +1,12 @@
-﻿namespace MovieWpfApp.Views
+﻿namespace MovieWpfApp.Views;
+
+/// <summary>
+/// Interaction logic for ErrorView.xaml
+/// </summary>
+public partial class ErrorView
 {
-    /// <summary>
-    /// Interaction logic for ErrorView.xaml
-    /// </summary>
-    public partial class ErrorView
+    public ErrorView()
     {
-        public ErrorView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

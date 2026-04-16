@@ -1,17 +1,16 @@
 ﻿using Minimal.Mvvm;
 
-namespace WpfMultiThreadedApp.Models
+namespace WpfMultiThreadedApp.Models;
+
+public partial class CityTimeZoneModel : BindableBase
 {
-    public partial class CityTimeZoneModel : BindableBase
+    public CityTimeZoneModel() 
     {
-        public CityTimeZoneModel() 
-        {
-        }
-
-        [Notify]
-        private string _name = null!;
-
-        [Notify]
-        private DateTime _localTime;
     }
+
+    [Notify]
+    private string _name = null!;
+
+    [Notify]
+    private DateTime _localTime;
 }

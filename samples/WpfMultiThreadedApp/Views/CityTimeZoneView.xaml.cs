@@ -1,16 +1,15 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
 
-namespace WpfMultiThreadedApp.Views
+namespace WpfMultiThreadedApp.Views;
+
+/// <summary>
+/// Interaction logic for CityTimeZoneView.xaml
+/// </summary>
+public partial class CityTimeZoneView : UserControl
 {
-    /// <summary>
-    /// Interaction logic for CityTimeZoneView.xaml
-    /// </summary>
-    public partial class CityTimeZoneView : UserControl
+    public CityTimeZoneView()
     {
-        public CityTimeZoneView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

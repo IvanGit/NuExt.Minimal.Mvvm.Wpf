@@ -1,13 +1,12 @@
-﻿namespace MovieWpfApp.Views
+﻿namespace MovieWpfApp.Views;
+
+/// <summary>
+/// Interaction logic for EditMovieView.xaml
+/// </summary>
+public partial class EditMovieView
 {
-    /// <summary>
-    /// Interaction logic for EditMovieView.xaml
-    /// </summary>
-    public partial class EditMovieView
+    public EditMovieView()
     {
-        public EditMovieView()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
     }
 }

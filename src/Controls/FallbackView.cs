@@ -2,53 +2,52 @@
 using System.Windows.Controls;
 using System.Windows.Media;
 
-namespace Minimal.Mvvm.Wpf.Controls
+namespace Minimal.Mvvm.Wpf.Controls;
+
+public class FallbackView : Panel
 {
-    public class FallbackView : Panel
+    public FallbackView()
     {
-        public FallbackView()
+        var tb = new TextBlock();
+        if (ViewModelHelper.IsInDesignMode)
         {
-            var tb = new TextBlock();
-            if (ViewModelHelper.IsInDesignMode)
-            {
-                tb.FontSize = 24;
-                tb.Foreground = Brushes.Red;
-            }
-            else
-            {
-                tb.FontSize = 20;
-                tb.Foreground = Brushes.Gray;
-            }
-            HorizontalAlignment = HorizontalAlignment.Center;
-            VerticalAlignment = VerticalAlignment.Center;
-            Children.Add(tb);
+            tb.FontSize = 24;
+            tb.Foreground = Brushes.Red;
         }
-
-        public static readonly DependencyProperty TextProperty = DependencyProperty.Register(
-            nameof(Text), typeof(string), typeof(FallbackView),
-            new PropertyMetadata(null, (d, e) => ((FallbackView)d).OnTextChanged()));
-
-        public string? Text
+        else
         {
-            get => (string?)GetValue(TextProperty);
-            set => SetValue(TextProperty, value);
+            tb.FontSize = 20;
+            tb.Foreground = Brushes.Gray;
         }
+        HorizontalAlignment = HorizontalAlignment.Center;
+        VerticalAlignment = VerticalAlignment.Center;
+        Children.Add(tb);
+    }
 
-        private void OnTextChanged()
-        {
-            ((TextBlock)Children[0]).Text = Text;
-        }
+    public static readonly DependencyProperty TextProperty = DependencyProperty.Register(
+        nameof(Text), typeof(string), typeof(FallbackView),
+        new PropertyMetadata(null, (d, e) => ((FallbackView)d).OnTextChanged()));
 
-        protected override Size MeasureOverride(Size availableSize)
-        {
-            ((TextBlock)Children[0]).Measure(availableSize);
-            return ((TextBlock)Children[0]).DesiredSize;
-        }
+    public string? Text
+    {
+        get => (string?)GetValue(TextProperty);
+        set => SetValue(TextProperty, value);
+    }
 
-        protected override Size ArrangeOverride(Size finalSize)
-        {
-            ((TextBlock)Children[0]).Arrange(new Rect(finalSize));
-            return finalSize;
-        }
+    private void OnTextChanged()
+    {
+        ((TextBlock)Children[0]).Text = Text;
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        ((TextBlock)Children[0]).Measure(availableSize);
+        return ((TextBlock)Children[0]).DesiredSize;
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        ((TextBlock)Children[0]).Arrange(new Rect(finalSize));
+        return finalSize;
     }
 }

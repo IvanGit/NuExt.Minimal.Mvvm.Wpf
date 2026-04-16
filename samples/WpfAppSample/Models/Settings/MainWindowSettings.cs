@@ -1,16 +1,15 @@
 ﻿using Minimal.Mvvm;
 
-namespace MovieWpfApp.Models
-{
-    public sealed partial class MainWindowSettings : SettingsBase
-    {
-        [Notify]
-        private bool _moviesOpened;
+namespace MovieWpfApp.Models;
 
-        protected override void InitializeCore()
-        {
-            base.InitializeCore();
-            MoviesOpened = true;
-        }
+public sealed partial class MainWindowSettings : SettingsBase
+{
+    [Notify]
+    private bool _moviesOpened;
+
+    protected override void InitializeCore()
+    {
+        base.InitializeCore();
+        MoviesOpened = true;
     }
 }

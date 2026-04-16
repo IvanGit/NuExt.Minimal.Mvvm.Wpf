@@ -1,31 +1,30 @@
 ﻿using Minimal.Mvvm;
 using Minimal.Mvvm.Wpf;
 
-namespace MovieWpfApp.ViewModels
+namespace MovieWpfApp.ViewModels;
+
+internal partial class InputDialogViewModel : ControlViewModel
 {
-    internal partial class InputDialogViewModel : ControlViewModel
+    #region Properties
+
+    [Notify]
+    private string? _inputMessage;
+
+    [Notify]
+    private string? _inputText;
+
+    #endregion
+
+    #region Methods
+
+    protected override async Task InitializeAsyncCore(CancellationToken cancellationToken)
     {
-        #region Properties
-
-        [Notify]
-        private string? _inputMessage;
-
-        [Notify]
-        private string? _inputText;
-
-        #endregion
-
-        #region Methods
-
-        protected override async Task InitializeAsyncCore(CancellationToken cancellationToken)
+        await base.InitializeAsyncCore(cancellationToken);
+        if (Parameter is string text)
         {
-            await base.InitializeAsyncCore(cancellationToken);
-            if (Parameter is string text)
-            {
-                InputText = text;
-            }
+            InputText = text;
         }
-
-        #endregion
     }
+
+    #endregion
 }
